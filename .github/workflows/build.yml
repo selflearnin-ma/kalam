@@ -112,8 +112,19 @@ jobs:
         if: ${{ vars.APPLE_DEVELOPMENT_TEAM == '' }}
         run: |
           python web/build.py --offline
+          # Tauri's Xcode phase only runs inside `tauri ios build` (which signs): build the Rust lib here instead
+          (cd src-tauri && cargo build --release --lib --target aarch64-apple-ios)
           cd src-tauri/gen/apple
           proj=$(ls -d *.xcodeproj | head -1)
+          lib=$(grep -o 'Externals/[^";]*libapp\.a' "$proj/project.pbxproj" | head -1)
+          echo "Xcode expects: $lib"
+          dest=$(echo "${lib:-Externals/arm64/\$(CONFIGURATION)/libapp.a}" | sed -e 's/\$(CONFIGURATION)/release/; s/\${CONFIGURATION}/release/')
+          mkdir -p "$(dirname "$dest")"
+          cp ../../target/aarch64-apple-ios/release/libkalam_lib.a "$dest"
+          ls -la "$dest"
+          # disable the "Build Rust Code" phase (it calls `tauri ios xcode-script`)
+          perl -0pi -e 's/shellScript = "(?:[^"\\]|\\.)*xcode-script(?:[^"\\]|\\.)*";/shellScript = "true";/g' "$proj/project.pbxproj"
+          grep -c 'xcode-script' "$proj/project.pbxproj" || true
           scheme=$(xcodebuild -list -project "$proj" | awk '/Schemes:/{f=1;next} f&&/_iOS/{print $1; exit}')
           xcodebuild -project "$proj" -scheme "$scheme" -configuration release -sdk iphoneos \
             -destination 'generic/platform=iOS' -derivedDataPath build \
