@@ -123,13 +123,19 @@
    "color": null
   },
   {
-   "text": "x^2 + y^2 <= 1",
+   "text": "D = x^2 + y^2 <= 1",
    "block": 25,
    "visible": true,
    "color": null
   },
   {
-   "text": "z = sin(x) cos(y)",
+   "text": "S = z = sin(x) cos(y)",
+   "block": 25,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"Le disque $x^2 + y^2 \\le 1$ est tracé en 2D, la surface $z = \\sin x \\cos y$ en 3D.\"",
    "block": 25,
    "visible": true,
    "color": null

@@ -74,6 +74,9 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 | hidden result | `Résoudre(f(x) = 0, x);` | nothing (trailing `;`) |
 | comment | `# pour moi` | nothing |
 
+- The code is never shown, only the output (a cell of definitions shows nothing); click a cell to edit it.
+- **Only definitions are drawn** (`f(x) = …`, `A = …`, `c = Cercle(…)`). Results (`f(x)`, `Tangente(f, 3)`, an
+  unnamed equation) are shown, not drawn: name an equation or region to draw it, `C = x^2 + y^2 = 4`.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and
   goes to the next cell; the **✓** button evaluates (phones). Cells after an edited one recompute.
 - The **coloured dots** show/hide each drawn object of the cell; the **⋯** menu inserts, moves,

@@ -97,6 +97,12 @@
    "block": 45,
    "visible": true,
    "color": null
+  },
+  {
+   "text": "\"الفلكة التي مركزها $O$ وشعاعها $3$ مرسومة في الفضاء\"",
+   "block": 45,
+   "visible": true,
+   "color": null
   }
  ],
  "commands": []

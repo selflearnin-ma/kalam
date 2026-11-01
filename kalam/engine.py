@@ -247,8 +247,9 @@ class Cell:
 
     @property
     def dim(self):
-        """2 or 3 when the cell draws something. A bare name (`f`, `A`) only shows a value: no second copy."""
-        if self.kind != 'math' or self.value is None or self.text.partition('#')[0].strip().isidentifier():
+        """2 or 3 when the line draws something: only definitions (f(x) = ..., A = ..., C = x^2 + y^2 = 4).
+        Results (f(x), f, Tangente(f, 3), an unnamed equation) are shown in the notebook, never drawn."""
+        if self.kind != 'math' or self.value is None or self.name is None:
             return None
         return dimension(self.value)
 
@@ -398,14 +399,16 @@ class Session:
         which become "..." lines of a single cell."""
         self.cells[:] = []
         self._snap = {}
+        ids = {}       # block in the file -> fresh id (ids saved in a file may collide with new cells' ids)
         for k, d in enumerate(items):
-            block = d.get('block', 'old%d' % k)
+            key = d.get('block', ('old', k))
             if d.get('kind') == 'text':
                 lines = ['"%s"' % ln.replace('"', '\\"') for ln in d['text'].split('\n') if ln.strip()] or ['']
             else:
                 lines = [d['text']]
             for ln in lines:
-                c = self.add_cell(ln, block=block)
+                c = self.add_cell(ln, block=ids.get(key))
+                ids.setdefault(key, c.block)
                 c.visible, c.color = d.get('visible', True), d.get('color')
         if not self.cells:
             self.add_cell()

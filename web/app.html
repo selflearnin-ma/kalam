@@ -60,9 +60,8 @@ main { flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-co
 .num { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
 .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; background: none; padding: 0; }
 .dot.on { background: currentColor; }
-.body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.body { min-width: 0; min-height: 22px; display: flex; flex-direction: column; gap: 3px; cursor: text; }
 .src { font-family: var(--mono); font-size: 12px; color: var(--faint); white-space: pre-wrap; word-break: break-word; }
-.src.def { color: var(--ink); font-size: 14px; cursor: text; }
 .out { font-size: 15px; overflow-x: auto; min-height: 22px; cursor: text; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .out mjx-container { margin: 0 !important; }
 .note { color: var(--muted); font-style: italic; font-size: 13px; }
@@ -351,10 +350,8 @@ function cellEl(k) {
       row.append(r, v); body.appendChild(row); shown++;
     }
   }
-  if (!shown) {     // only definitions (or empty): the code is the whole cell
-    const text = blockText(k);
-    body.innerHTML = text.trim() ? `<div class="src def" dir="ltr">${esc(text)}</div>` : `<div class="ph">${esc(tr('placeholder'))}</div>`;
-  }
+  // definitions only: no output (the code stays hidden; click the cell to edit it). A new empty cell shows help.
+  if (!shown && !blockText(k).trim()) body.innerHTML = `<div class="ph">${esc(tr('placeholder'))}</div>`;
   return el;
 }
 function textParts(el, parts) {
@@ -370,7 +367,7 @@ function startEdit(k) { editing = k; renderNotebook(); }
 function commit(k, text, next) {
   editing = -1;
   if (text !== blockText(k)) apply(call('set_cell', k, text)); else renderNotebook();
-  if (!next) { editing = k; return renderNotebook(); }    // stay on the cell, ready to edit again
+  if (!next) return;                                       // stay on this cell, showing its output
   if (k === S.blocks.length - 1 && text.trim()) apply(call('insert_cell', k + 1, ''));
   if (k + 1 < S.blocks.length) startEdit(k + 1);
 }
@@ -381,6 +378,7 @@ function editKey(e, k, ed) {
   else if (e.key === 'Escape') { editing = -1; renderNotebook(); }
 }
 $('#nb').onclick = e => {
+  if (e.target.closest('.edrow')) return;     // clicks in the editor (text box, ✓) must not reopen it
   if (e.target.closest('[data-add]')) { const n = S.blocks.length; apply(call('insert_cell', n, '')); startEdit(n); return; }
   const vis = e.target.closest('[data-vis]');
   if (vis) { const i = +vis.dataset.vis, c = S.cells[i]; apply(call('set_style', i, !c.visible, c.color || '')); return; }

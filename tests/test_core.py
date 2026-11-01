@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import sympy as sp  # noqa: E402
 
-from kalam.engine import Session, dimension  # noqa: E402
+from kalam.engine import Cell, Session, dimension  # noqa: E402
 from kalam.export import figure_tkz, load_klm, save_klm, to_latex, to_python  # noqa: E402
 
 x, y = sp.symbols('x y')
@@ -99,6 +99,10 @@ def test_cells_of_several_lines():
     assert [c.latex for c in lines] == ['', '', '', r'\left\{-1, 3\right\}', '']   # definition, text, comment, result, ;
     assert lines[1].is_text and lines[1].parts == [(False, 'Étude de $f$ : on pose $f(x)=x^{2} - 2 x - 3$.')]
     assert lines[0].dim == 2 and s.env['f'](2) == -3
+    # only definitions are drawn: results and unnamed equations are only shown
+    s.insert_block(1, 'f(x)\nTangent(f, 3)\ny = 2x + 1\nC = x^2 + y^2 = 4')
+    assert [c.dim for c in s.block_lines(s.blocks()[1])] == [None, None, None, 2]
+    s.delete_block(s.blocks()[1])
     s.insert_block(1, '$1')                       # $n = cell n on screen (its last line)
     assert s.block_lines(s.blocks()[1])[0].value == -3
     s.set_block(b, 'f(x) = x^2 - 4\nSolve(f(x) = 0, x)')    # editing a cell recomputes the cells after it
@@ -109,6 +113,10 @@ def test_cells_of_several_lines():
     s.load_cells([dict(kind='text', text='Bonjour "tous"\n\nsuite'), dict(kind='math', text='g(x) = 2x')])
     assert [c.text for c in s.cells] == ['"Bonjour \\"tous\\""', '"suite"', 'g(x) = 2x']
     assert s.cells[0].parts == [(False, 'Bonjour "tous"')] and len(s.blocks()) == 2
+    # block ids in a file must not capture new cells (ids are renumbered on load)
+    s.load_cells([dict(text='a = 1', block=Cell._next + 1), dict(text='b = 2', block=Cell._next + 2)])
+    s.insert_block(2, 'c = 3')
+    assert len(s.blocks()) == 3
 
 
 def test_web_bridge():
@@ -117,7 +125,7 @@ def test_web_bridge():
     import io
     from kalam import web
     web.new()
-    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nx^2 + y^2 < 4\nS = Sphere((0,0,0), 1)')
+    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nS = Sphere((0,0,0), 1)')
     lines = json.loads(web.state())['lines']
     assert lines[0]['scene'] == [dict(k='fx', v='x', js='Math.pow(x, 2)', lo=None, hi=None)]
     assert lines[1]['scene'][0]['free'] and lines[2]['scene'][0]['op'] == '<'
