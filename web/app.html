@@ -355,6 +355,7 @@ function editKey(e, k, ed) {
 }
 $('#nb').onclick = e => {
   if (e.target.closest('.edrow')) return;     // clicks in the editor (text box, ✓) must not reopen it
+  if (e.target.closest('.fig, .fig3d, input[type=range]')) return;   // zoom buttons, pan, drag and sliders work on the figure only
   if (e.target.closest('[data-add]')) { const n = S.blocks.length; apply(call('insert_cell', n, '')); startEdit(n); return; }
   const cell = e.target.closest('.cell'); if (!cell) return;
   const k = +cell.dataset.b, act = e.target.closest('[data-act]');
