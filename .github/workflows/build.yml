@@ -1,6 +1,6 @@
 # Builds Kalam (web core + Pyodide + Tauri) for every platform.
-# Run it from the Actions tab ("Run workflow") or push a tag like v0.1.0.
-# Each job uploads its installers as an artifact you download from the run page.
+# Run it from the Actions tab ("Run workflow"): installers are attached to the run page.
+# Push a tag like v0.1.0: the same build, then a GitHub Release with all installers.
 name: build
 
 on:
@@ -100,3 +100,22 @@ jobs:
         with:
           name: kalam-ios
           path: src-tauri/gen/apple/build/**/*.ipa
+
+  release:
+    # only for version tags; iOS is not waited for (it needs Apple signing)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out }
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # apk names are generic (app-universal-debug.apk): give it a clear name
+          for f in $(find out/kalam-android -name '*.apk'); do mv "$f" "out/Kalam_${GITHUB_REF_NAME#v}_android.apk"; done
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Kalam $GITHUB_REF_NAME" --generate-notes \
+            $(find out -type f \( -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' -o -name '*.dmg' -o -name '*.apk' \))
