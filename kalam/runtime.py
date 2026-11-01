@@ -429,6 +429,11 @@ class Figure:
         return 'Figure(%s)' % self.items
 
 
+def Graphic():
+    """Graphic(): an empty figure; add objects with G.Draw(f, A, ...)."""
+    return Figure([])
+
+
 def Draw(*objs):
     """Draw(f, A, c, ...): a figure with these objects (2D or 3D)."""
     return Figure(objs)

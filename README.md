@@ -78,6 +78,8 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 - The code is never shown, only the output (a cell of definitions shows nothing); click a cell to edit it.
 - **Figures appear only where you ask for them**, as the output of a drawing command:
   `Tracer(f, A, c)` (any 2D or 3D objects), `Courbe(f, a, b)` (one function), `Graphe3D(x^2 - y^2)`.
+  To build one figure step by step: `G = Graphique()`, then `G.Tracer(f, A)`, `G.Courbe(sin(x))`, … (each adds
+  to G and shows nothing), then the line `G` shows the figure with all its objects.
   In a figure: drag to pan, wheel or pinch to zoom, + − ⌂ buttons; drag a free point (`A = (1, 2)`) and its line
   is rewritten. Figures are exported to LaTeX (tkz) in place.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and

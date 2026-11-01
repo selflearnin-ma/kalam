@@ -59,6 +59,7 @@ BUILTINS = [
     ('Inverse', 'Inverse', 'مقلوب', 'matrix', 'M'),
     ('Transpose', 'Transposée', 'منقول', 'matrix', 'M'),
     ('Eigenvalues', 'ValeursPropres', 'قيم_ذاتية', 'matrix', 'M'),
+    ('Graphic', 'Graphique', 'رسم', 'graph2d', ''),
     ('Draw', 'Tracer', 'ارسم', 'graph2d', 'f, A, c'),
     ('Plot', 'Courbe', 'منحنى', 'graph2d', 'f, a, b'),
     ('ParametricCurve', 'CourbeParamétrée', 'منحنى_وسيطي', 'graph2d', 'cos(t), sin(t), t, 0, 2pi'),

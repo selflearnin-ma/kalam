@@ -105,6 +105,19 @@ def test_figures():
     assert shows == [False, False, False, True, False, True, True, True, False, False]   # only drawing commands
     assert s.cells[3].labels == ['f', 'A', 'c'] and s.cells[3].latex == ''
     assert 'either 2D or 3D' in s.cells[8].error and 'cannot be drawn' in s.cells[9].error
+    # several objects added to one graphic, shown where its name is typed
+    s.add_cell('G = Graphique()')
+    s.add_cell('G.Tracer(f, A)')
+    s.add_cell('G.Courbe(sin(x));')
+    s.add_cell('G.Draw(c)')
+    s.add_cell('G')
+    s.evaluate_all()
+    g = s.cells[-5:]
+    assert [c.error for c in g] == [None] * 5 and [c.shows_figure for c in g] == [False] * 4 + [True]
+    assert len(g[-1].value.items) == 4 and g[-1].labels[:2] == ['f', 'A']
+    s.move_point(s.cells[1], 0, 0)
+    assert s.cells[-1].value.items[1] == sp.Point(0, 0)
+    assert 'G = Draw(G, Draw(c))' in to_python(s)
     from kalam.export import figure_window
     assert figure_window(s.cells[3].value.items) == [-6, 6, -5, 11]    # A, c and the parabola (|y| <= 10) on [-6, 6]
 

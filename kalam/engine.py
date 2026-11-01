@@ -39,6 +39,7 @@ _UNICODE = {'²': '^2', '³': '^3', '×': '*', '÷': '/', '·': '*', '−': '-',
 _DIGITS = str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '0123456789' * 2)
 _RENAME = {'e': 'e_', 'i': 'i_', 'π': 'pi', 'ln': 'log', 'abs': 'Abs', 'racine': 'sqrt'}
 _DEF = re.compile(r'^\s*([^\W\d]\w*)\s*(?:\(([^()]*)\))?\s*(:=|=)(?!=)\s*(.+)$', re.S)
+_METHOD = re.compile(r'^\s*([^\W\d]\w*)\s*\.\s*([^\W\d]\w*)\s*\((.*)\)\s*$', re.S)
 _NUM = r'-?\d+(?:\.\d+)?'
 _FREE_POINT = re.compile(r'^\s*(\w*)\s*\(\s*(%s)\s*,\s*(%s)\s*\)\s*$' % (_NUM, _NUM))
 _SLIDER = re.compile(r'^\s*(\w+)\s*\((.*)\)\s*$', re.S)
@@ -365,6 +366,8 @@ class Session:
     def _check_figure(self, c):
         items = c.value.items
         if not items:
+            if c.name:                                 # G = Graphic(): empty until G.Draw(...)
+                return
             raise KalamError('nothing to draw')
         dims = [dimension(i) for i in items]
         bad = [i for i, d in zip(items, dims) if d is None]
@@ -376,6 +379,9 @@ class Session:
         c.labels = [names.get(id(i)) for i in items]
 
     def _evaluate_math(self, c, code):
+        m = _METHOD.match(code)
+        if m and isinstance(self.env.get(m.group(1)), runtime.Figure):   # G.Draw(f, A) means G = Draw(G, Draw(f, A))
+            code = '%s = Draw(%s, %s(%s))' % (m.group(1), m.group(1), m.group(2), m.group(3))
         m = _DEF.match(code)
         if m and m.group(3) == '=' and m.group(1) in EQUATION_VARS and not m.group(2):
             m = None                                   # y = 2x+1 is an equation
