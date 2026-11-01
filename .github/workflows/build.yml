@@ -33,7 +33,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: npm ci
-      - run: python tests/test_core.py
+      - run: pip install sympy==1.14.0 && python tests/test_core.py
       - run: npx tauri build            # runs web/build.py --offline first (tauri.conf.json)
       - uses: actions/upload-artifact@v4
         with:
@@ -59,7 +59,9 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: android-actions/setup-android@v3
-      - run: sdkmanager "ndk;${NDK_VERSION}"
+        with:
+          # default list asks for the removed 'tools' package
+          packages: platform-tools ndk;27.2.12479018
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
