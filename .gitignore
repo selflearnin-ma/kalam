@@ -1,0 +1,6 @@
+node_modules/
+__pycache__/
+web/.deps/
+web/dist/
+src-tauri/target/
+src-tauri/gen/

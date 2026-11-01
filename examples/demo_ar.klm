@@ -1,0 +1,91 @@
+{
+ "format": "kalam",
+ "version": 1,
+ "lang": "ar",
+ "view2d": {
+  "cx": 0,
+  "cy": 0,
+  "scale": 45
+ },
+ "cells": [
+  {
+   "kind": "math",
+   "text": "f(x) = x^3 - 3x",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "text",
+   "text": "ندرس الدالة $f$ حيث {{f(x)}}",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "حل(f(x) = 0, x)  # جذور الدالة",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "مشتقة(f)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "م = مماس(f, 2)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "A = (-3, -2)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "B = (2, 3)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "C = (3, -1)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "ث = مضلع(A, B, C)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "ع = منتصف(A, B)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "نهاية(sin(x)/x, x, 0)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "تكامل(f, 0, 2)",
+   "visible": true,
+   "color": null
+  },
+  {
+   "kind": "math",
+   "text": "S = فلكة((0, 0, 0), 3)",
+   "visible": true,
+   "color": null
+  }
+ ],
+ "commands": []
+}

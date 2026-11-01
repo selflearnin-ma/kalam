@@ -1,0 +1,18 @@
+[package]
+name = "kalam"
+version = "0.1.0"
+description = "Kalam: CAS notebook (SymPy via Pyodide) with 2D/3D graphics"
+edition = "2021"
+
+[lib]
+# lib name differs from the bin name (Windows/Cargo quirk); mobile needs staticlib/cdylib
+name = "kalam_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"

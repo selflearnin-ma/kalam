@@ -1,0 +1,13 @@
+{
+  "name": "kalam",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "tauri": "tauri",
+    "web": "python web/build.py",
+    "web:offline": "python web/build.py --offline"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.3"
+  }
+}
