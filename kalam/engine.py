@@ -298,14 +298,19 @@ class Session:
         c.reset()
         n = self.index(c) + 1
         if c.kind == 'text':
+            # {{expr}} becomes LaTeX: as is inside $...$ ("$f(x)={{f(x)}}$"), wrapped in $...$ outside
+            out = []
             for i, chunk in enumerate(re.split(r'\{\{(.*?)\}\}', c.text, flags=re.S)):
                 if i % 2 == 0:
-                    c.parts.append((False, chunk))
-                else:
-                    try:
-                        c.parts.append((True, sp.latex(self.evaluate_expression(chunk))))
-                    except Exception as e:
-                        c.parts.append((False, '[%s]' % e))
+                    out.append(chunk)
+                    continue
+                in_math = ''.join(out).count('$') % 2 == 1
+                try:
+                    tex = sp.latex(self.evaluate_expression(chunk))
+                except Exception as e:
+                    tex = r'\text{[%s]}' % str(e).replace('$', '')
+                out.append(tex if in_math else '$%s$' % tex)
+            c.parts = [(False, ''.join(out))]      # one text with $...$ formulas, rendered by the UI
             return
         code, _, note = c.text.partition('#')
         c.note = note.strip() or None

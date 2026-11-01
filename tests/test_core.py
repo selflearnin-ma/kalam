@@ -43,6 +43,10 @@ def test_languages_and_parsing():
     s.evaluate_all()
     assert [c.latex for c in s.cells[-3:]] == [r'\left(1, 2\right)', r'f : x \mapsto x^{2} - 2 x - 3', 'x^{2} - 2 x - 3']
     assert [c.dim for c in s.cells[-3:]] == [None, None, None]     # a bare name shows, it does not draw again
+    # {{expr}} inside $...$ joins that formula; outside it becomes its own formula
+    s.add_cell('on pose $f(x)={{f(x)}}$ et {{f(1)}}', 'text')
+    s.evaluate_all()
+    assert s.cells[-1].parts == [(False, 'on pose $f(x)=x^{2} - 2 x - 3$ et $-4$')]
 
 
 def test_drawables():
