@@ -68,21 +68,20 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 
 | Line | Example | Shown |
 |---|---|---|
-| definition | `f(x) = x^2 - 2x - 3`, `A = (1, 2)` | nothing (defined, and drawn if drawable) |
+| definition | `f(x) = x^2 - 2x - 3`, `A = (1, 2)` | nothing |
 | expression | `Résoudre(f(x) = 0, x)`, `f`, `f(x)`, `A` | its result |
+| drawing | `Tracer(f, A, c)`, `Courbe(f)`, `Graphe3D(x y)` | a figure |
 | text | `"Soit $f$ définie par $f(x) = {{f(x)}}$."` or `« … »` | the sentence; `$…$` is a formula, `{{expr}}` a computed value |
 | hidden result | `Résoudre(f(x) = 0, x);` | nothing (trailing `;`) |
 | comment | `# pour moi` | nothing |
 
 - The code is never shown, only the output (a cell of definitions shows nothing); click a cell to edit it.
-- **Only definitions are drawn** (`f(x) = …`, `A = …`, `c = Cercle(…)`). Results (`f(x)`, `Tangente(f, 3)`, an
-  unnamed equation) are shown, not drawn: name an equation or region to draw it, `C = x^2 + y^2 = 4`.
+- **Figures appear only where you ask for them**, as the output of a drawing command:
+  `Tracer(f, A, c)` (any 2D or 3D objects), `Courbe(f, a, b)` (one function), `Graphe3D(x^2 - y^2)`.
+  In a figure: drag to pan, wheel or pinch to zoom, + − ⌂ buttons; drag a free point (`A = (1, 2)`) and its line
+  is rewritten. Figures are exported to LaTeX (tkz) in place.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and
   goes to the next cell; the **✓** button evaluates (phones). Cells after an edited one recompute.
-- The **coloured dots** show/hide each drawn object of the cell; the **⋯** menu inserts, moves,
-  deletes a cell and sets colours.
-- **Drag free points** (`A = (1, 2)`) in the 2D view; their line is rewritten.
-- 2D view: drag to pan, wheel or pinch to zoom, buttons + − ⌂. 3D view: drag to rotate, wheel to zoom.
 - Notebooks from earlier versions open unchanged: their text cells become `"…"` lines.
 
 ### Input language

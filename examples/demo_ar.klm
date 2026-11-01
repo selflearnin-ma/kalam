@@ -2,105 +2,119 @@
  "format": "kalam",
  "version": 2,
  "lang": "ar",
- "view2d": {
-  "cx": 0.5,
-  "cy": 0,
-  "scale": 45
- },
+ "view2d": {},
  "cells": [
   {
    "text": "f(x) = x^3 - 3x",
-   "block": 28,
+   "block": 34,
    "visible": true,
    "color": null
   },
   {
    "text": "\"نعتبر الدالة $f$ المعرفة على $\\mathbb{R}$ بما يلي $f(x) = {{f(x)}}$\"",
-   "block": 28,
+   "block": 34,
    "visible": true,
    "color": null
   },
   {
    "text": "\"حلول المعادلة $f(x) = 0$ هي\"",
-   "block": 28,
+   "block": 34,
    "visible": true,
    "color": null
   },
   {
    "text": "حل(f(x) = 0, x)",
-   "block": 28,
+   "block": 34,
    "visible": true,
    "color": null
   },
   {
    "text": "\"مشتقة الدالة هي $f'(x) = {{مشتقة(f)(x)}}$\"",
-   "block": 28,
+   "block": 34,
    "visible": true,
    "color": null
   },
   {
    "text": "م = مماس(f, 2)",
-   "block": 34,
+   "block": 40,
    "visible": true,
    "color": null
   },
   {
    "text": "\"معادلة المماس عند النقطة ذات الأفصول $2$ هي\"",
-   "block": 34,
+   "block": 40,
    "visible": true,
    "color": null
   },
   {
    "text": "م",
-   "block": 34,
+   "block": 40,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "ارسم(f, م)",
+   "block": 40,
    "visible": true,
    "color": null
   },
   {
    "text": "A = (-3, -2)",
-   "block": 38,
+   "block": 45,
    "visible": true,
    "color": null
   },
   {
    "text": "B = (2, 3)",
-   "block": 38,
+   "block": 45,
    "visible": true,
    "color": null
   },
   {
    "text": "C = (3, -1)",
-   "block": 38,
+   "block": 45,
    "visible": true,
    "color": null
   },
   {
    "text": "ث = مضلع(A, B, C)",
-   "block": 38,
+   "block": 45,
    "visible": true,
    "color": null
   },
   {
    "text": "ع = منتصف(A, B)",
-   "block": 38,
+   "block": 45,
    "visible": true,
    "color": null
   },
   {
-   "text": "\"منتصف القطعة $[AB]$ هو النقطة $({{ع}})$\"",
-   "block": 38,
+   "text": "\"منتصف القطعة $[AB]$ هو النقطة ${{ع}}$\"",
+   "block": 45,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "ارسم(A, B, C, ث, ع)",
+   "block": 45,
    "visible": true,
    "color": null
   },
   {
    "text": "S = فلكة((0, 0, 0), 3)",
-   "block": 45,
+   "block": 53,
    "visible": true,
    "color": null
   },
   {
-   "text": "\"الفلكة التي مركزها $O$ وشعاعها $3$ مرسومة في الفضاء\"",
-   "block": 45,
+   "text": "\"الفلكة التي مركزها $O$ وشعاعها $3$\"",
+   "block": 53,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "ارسم(S)",
+   "block": 53,
    "visible": true,
    "color": null
   }

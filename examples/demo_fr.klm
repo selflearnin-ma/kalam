@@ -2,11 +2,7 @@
  "format": "kalam",
  "version": 2,
  "lang": "fr",
- "view2d": {
-  "cx": 0.5,
-  "cy": 0,
-  "scale": 45
- },
+ "view2d": {},
  "cells": [
   {
    "text": "f(x) = x^2 - 2x - 3",
@@ -57,86 +53,116 @@
    "color": null
   },
   {
+   "text": "Tracer(f, T)",
+   "block": 7,
+   "visible": true,
+   "color": null
+  },
+  {
    "text": "A = (-2, 1)",
-   "block": 11,
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "B = (1, -3)",
-   "block": 11,
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "I = Milieu(A, B)",
-   "block": 11,
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "c = Cercle(I, A)",
-   "block": 11,
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "d = Médiatrice(A, B)",
-   "block": 11,
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "\"Le milieu de $[AB]$ est $I{{I}}$ et le cercle de diamètre $[AB]$ a pour équation :\"",
-   "block": 11,
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "c",
-   "block": 11,
+   "block": 12,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"Déplacez $A$ ou $B$ dans la figure :\"",
+   "block": 12,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "Tracer(A, B, I, c, d)",
+   "block": 12,
    "visible": true,
    "color": null
   },
   {
    "text": "a = Curseur(-3, 3, 0.1, 1.5)",
-   "block": 19,
+   "block": 22,
    "visible": true,
    "color": null
   },
   {
    "text": "g(x) = a sin(x)",
-   "block": 19,
+   "block": 22,
    "visible": true,
    "color": null
   },
   {
    "text": "\"Déplacez le curseur : $g(x) = {{g(x)}}$.\"",
-   "block": 19,
+   "block": 22,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "Tracer(g)",
+   "block": 22,
    "visible": true,
    "color": null
   },
   {
    "text": "\"L'aire sous la courbe de $f$ entre $-1$ et $3$ vaut $\\int_{-1}^{3} f(x)\\,dx = {{Intégrale(f, -1, 3)}}$.\"",
-   "block": 23,
+   "block": 27,
    "visible": true,
    "color": null
   },
   {
    "text": "D = x^2 + y^2 <= 1",
-   "block": 25,
+   "block": 29,
    "visible": true,
    "color": null
   },
   {
-   "text": "S = z = sin(x) cos(y)",
-   "block": 25,
+   "text": "\"Le disque unité, puis la surface $z = \\sin x \\cos y$ :\"",
+   "block": 29,
    "visible": true,
    "color": null
   },
   {
-   "text": "\"Le disque $x^2 + y^2 \\le 1$ est tracé en 2D, la surface $z = \\sin x \\cos y$ en 3D.\"",
-   "block": 25,
+   "text": "Tracer(D)",
+   "block": 29,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "Graphe3D(sin(x) cos(y))",
+   "block": 29,
    "visible": true,
    "color": null
   }

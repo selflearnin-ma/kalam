@@ -74,7 +74,8 @@ def test_user_command():
 
 def test_exports():
     s = run('A = (1, 2)', 'f(x) = x^2', 'k = Slider(0, 3)', 'T = Tangente(f, k)', 'Solve(f(x) = 4, x)',
-            'c = Cercle(A, 2)', 'Plot(sin(x), 0, pi)', 'u = ParametricCurve(cos(t), sin(t), t, 0, 2pi)')
+            'c = Cercle(A, 2)', 'Plot(sin(x), 0, pi)', 'u = ParametricCurve(cos(t), sin(t), t, 0, 2pi)',
+            'Tracer(f, A, c, T, u)')
     with tempfile.TemporaryDirectory() as d:
         py = os.path.join(d, 'out.py')
         with open(py, 'w') as f:
@@ -88,8 +89,24 @@ def test_exports():
         assert [c.latex for c in s2.cells] == [c.latex for c in s.cells]
     tex = to_latex(s)
     assert '\\begin{document}' in tex and '\\left\\{-2, 2\\right\\}' in tex   # Solve(f(x) = 4, x)
-    fig = figure_tkz(s, dict(xmin=-5, xmax=5, ymin=-5, ymax=5))
+    assert tex.count('\\begin{tikzpicture}') == 2 and '\\usepackage{tkz-fct}' in tex   # Plot(...) and Tracer(...)
+    fig = figure_tkz(s)
     assert '\\tkzDefPoint(1,2){A}' in fig and '\\tkzFct' in fig and '\\tkzDrawCircle' in fig
+    assert fig.count('\\begin{tikzpicture}') == 2
+
+
+def test_figures():
+    s = Session()
+    for t in ('f(x) = x^2 - 2x - 3', 'A = (-2, 1)', 'c = Cercle(A, 2)', 'Tracer(f, A, c)', 'p = Tracer(f);', 'p',
+              'Courbe(sin(x), 0, pi)', 'Graphe3D(x y)', 'Tracer(A, Sphere((0,0,0), 1))', 'Tracer(3)'):
+        s.add_cell(t)
+    s.evaluate_all()
+    shows = [c.shows_figure for c in s.cells]
+    assert shows == [False, False, False, True, False, True, True, True, False, False]   # only drawing commands
+    assert s.cells[3].labels == ['f', 'A', 'c'] and s.cells[3].latex == ''
+    assert 'either 2D or 3D' in s.cells[8].error and 'cannot be drawn' in s.cells[9].error
+    from kalam.export import figure_window
+    assert figure_window(s.cells[3].value.items) == [-6, 6, -5, 11]    # A, c and the parabola (|y| <= 10) on [-6, 6]
 
 
 def test_cells_of_several_lines():
@@ -125,17 +142,20 @@ def test_web_bridge():
     import io
     from kalam import web
     web.new()
-    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nS = Sphere((0,0,0), 1)')
+    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nTracer(f, A, D)\nGraphe3D(x y)')
     lines = json.loads(web.state())['lines']
-    assert lines[0]['scene'] == [dict(k='fx', v='x', js='Math.pow(x, 2)', lo=None, hi=None)]
-    assert lines[1]['scene'][0]['free'] and lines[2]['scene'][0]['op'] == '<'
-    assert lines[3]['scene'][0]['k'] == 'sph' and len({ln['block'] for ln in lines}) == 1
+    assert [('figure' in ln) for ln in lines] == [False, False, False, True, True]     # only drawing commands
+    fig = lines[3]['figure']
+    assert fig['dim'] == 2 and [it['name'] for it in fig['items']] == ['f', 'A', 'D']
+    assert fig['items'][0]['scene'] == [dict(k='fx', v='x', js='Math.pow(x, 2)', lo=None, hi=None)]
+    assert fig['items'][1]['line'] == 1 and fig['items'][1]['scene'][0]['free']       # A can be dragged
+    assert fig['items'][2]['scene'][0]['op'] == '<' and lines[4]['figure']['dim'] == 3
     web.move_point(1, 3, 4)
     assert json.loads(web.state())['lines'][1]['text'] == 'A = (3, 4)'
     web.insert_cell(1, '"texte"')
     assert json.loads(web.klm_text())['cells'][-1]['text'] == '"texte"'
     names = zipfile.ZipFile(io.BytesIO(web.export_zip('k'))).namelist()
-    assert sorted(names) == ['k.klm', 'k.py', 'k.tex', 'k_figure.tex']
+    assert sorted(names) == ['k.klm', 'k.py', 'k.tex', 'k_figures.tex']
 
 
 if __name__ == '__main__':

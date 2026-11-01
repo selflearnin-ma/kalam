@@ -15,8 +15,8 @@ from sympy.printing.jscode import jscode
 
 from . import runtime
 from .commands import CATEGORIES, Registry
-from .engine import Session
-from .export import figure_tkz, to_latex, to_python
+from .engine import Session, dimension
+from .export import figure_tkz, figure_window, to_latex, to_python
 from .i18n import STRINGS
 
 X, Y, Z = runtime.x, runtime.y, runtime.z
@@ -123,13 +123,22 @@ def _scene(v, free):
 # ---------------------------------------------------------------- state
 # The page shows one cell per block (group of lines); the engine works line by line.
 # Cell operations take the cell's position on screen; style, points and sliders take a line index.
-def _line_json(c):
-    d = dict(text=c.text, block=c.block, visible=c.visible, color=c.color, name=c.name,
-             latex=c.latex, error=c.error, text_line=c.is_text, parts=c.parts)
-    if c.value is not None and not c.error:
-        d['dim'] = c.dim
-        d['free'] = c.is_free_point
-        d['scene'] = scene(c.value, c.is_free_point) if d['dim'] else []
+def _figure_json(c, i):
+    """Objects of a figure with their name and, for a free point, the line that defines it (to drag it)."""
+    items = []
+    for v, name in zip(c.value.items, c.labels):
+        line = next((k for k in range(i - 1, -1, -1) if session.cells[k].name == name), None) if name else None
+        free = line is not None and session.cells[line].is_free_point
+        items.append(dict(scene=scene(v, free), name=name, line=line if free else None))
+    dim = dimension(c.value.items[0])
+    return dict(dim=dim, items=items, window=figure_window(c.value.items) if dim == 2 else None)
+
+
+def _line_json(c, i):
+    d = dict(text=c.text, block=c.block, name=c.name, latex=c.latex, error=c.error,
+             text_line=c.is_text, parts=c.parts)
+    if c.shows_figure:
+        d['figure'] = _figure_json(c, i)
     if c.slider:
         s = c.slider
         d['slider'] = dict(lo=s.lo, hi=s.hi, step=s.step, value=float(c.value))
@@ -137,7 +146,7 @@ def _line_json(c):
 
 
 def state():
-    return json.dumps(dict(lines=[_line_json(c) for c in session.cells]))
+    return json.dumps(dict(lines=[_line_json(c, i) for i, c in enumerate(session.cells)]))
 
 
 def _block(pos):
@@ -164,12 +173,6 @@ def move_cell(pos, step):
     return state()
 
 
-def set_style(i, visible, color):
-    c = session.cells[int(i)]
-    c.visible, c.color = bool(visible), color or None
-    return state()
-
-
 def move_point(i, x, y):
     session.move_point(session.cells[int(i)], x, y)
     return state()
@@ -186,8 +189,8 @@ def new():
 
 
 # ---------------------------------------------------------------- files
-def klm_text(lang='fr', view=None):
-    data = {'format': 'kalam', 'version': 2, 'lang': lang, 'view2d': json.loads(view) if view else {},
+def klm_text(lang='fr'):
+    data = {'format': 'kalam', 'version': 2, 'lang': lang,
             'cells': session.cells_json(),
             'commands': [c.to_json() for c in session.registry.user_commands()]}
     return json.dumps(data, ensure_ascii=False, indent=1)
@@ -201,25 +204,23 @@ def load_klm_text(text):
         if d['name'] not in session.registry.commands or session.registry.commands[d['name']].code is not None:
             session.registry.add_user(d)
     session.load_cells(data['cells'])
-    return json.dumps(dict(view=data.get('view2d') or {}, lang=data.get('lang')))
+    return json.dumps(dict(lang=data.get('lang')))
 
 
-def export_zip(name='kalam', lang='fr', view=None):
-    """One zip with the notebook (.klm), Python, LaTeX notebook and tkz figure."""
-    v = json.loads(view) if view else dict(xmin=-8, xmax=8, ymin=-6, ymax=6)
+def export_zip(name='kalam', lang='fr'):
+    """One zip with the notebook (.klm), Python, LaTeX notebook and tkz figures."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
-        z.writestr(name + '.klm', klm_text(lang, view))
+        z.writestr(name + '.klm', klm_text(lang))
         z.writestr(name + '.py', to_python(session))
         z.writestr(name + '.tex', to_latex(session, lang))
-        z.writestr(name + '_figure.tex', figure_tkz(session, v))
+        z.writestr(name + '_figures.tex', figure_tkz(session))
     return buf.getvalue()
 
 
-def export_text(kind, lang='fr', view=None):
-    v = json.loads(view) if view else dict(xmin=-8, xmax=8, ymin=-6, ymax=6)
+def export_text(kind, lang='fr'):
     return {'py': lambda: to_python(session), 'tex': lambda: to_latex(session, lang),
-            'fig': lambda: figure_tkz(session, v), 'klm': lambda: klm_text(lang, view)}[kind]()
+            'fig': lambda: figure_tkz(session), 'klm': lambda: klm_text(lang)}[kind]()
 
 
 # ---------------------------------------------------------------- commands

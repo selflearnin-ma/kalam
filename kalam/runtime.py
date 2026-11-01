@@ -410,9 +410,34 @@ def Eigenvalues(M):
 
 
 # ---------------------------------------------------------------- plotting
+class Figure:
+    """What a drawing command shows: the objects to draw (all 2D or all 3D)."""
+    def __init__(self, items):
+        self.items = []
+        for i in items:
+            if isinstance(i, Figure):
+                self.items += i.items
+            elif isinstance(i, (list, tuple)):     # e.g. the points of Intersect(...)
+                self.items += list(i)
+            else:
+                self.items.append(i)
+
+    def _latex(self, printer):
+        return r'\text{[figure]}'
+
+    def __repr__(self):
+        return 'Figure(%s)' % self.items
+
+
+def Draw(*objs):
+    """Draw(f, A, c, ...): a figure with these objects (2D or 3D)."""
+    return Figure(objs)
+
+
 def Plot(f, a=None, b=None):
+    """Plot(f) | Plot(f, a, b): figure with the graph of f."""
     e, v = _body(f)
-    return Graph(e, v, a, b)
+    return Figure([Graph(e, v, a, b)])
 
 
 def ParametricCurve(*a):
@@ -422,9 +447,10 @@ def ParametricCurve(*a):
 
 
 def Plot3D(f):
+    """Plot3D(f) | Plot3D(expr in x, y): 3D figure of the surface z = f(x, y)."""
     if isinstance(f, sp.Lambda):
-        return Surface([f.expr.subs(dict(zip(f.variables, (x, y))))])
-    return Surface([f])
+        return Figure([Surface([f.expr.subs(dict(zip(f.variables, (x, y))))])])
+    return Figure([Surface([f])])
 
 
 def ParametricSurface(X, Y, Z, u, u0, u1, v, v0, v1):

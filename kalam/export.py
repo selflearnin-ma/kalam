@@ -3,6 +3,7 @@ import inspect
 import io
 import json
 import keyword
+import math
 import re
 import tokenize
 
@@ -10,7 +11,7 @@ import sympy as sp
 from sympy.printing.str import StrPrinter
 
 from . import runtime
-from .engine import GLOBALS_BASE, Session, fmt
+from .engine import GLOBALS_BASE, Session, dimension, fmt
 
 
 
@@ -148,12 +149,19 @@ def to_latex(session, lang='fr'):
         if c.is_text:
             txt = ''.join('$%s$' % s if is_math else s for is_math, s in c.parts)
             body.append(_tex_text(txt) + '\n')
+        elif c.shows_figure and dimension(c.value.items[0]) == 2:
+            pic = tikz_picture(c.value.items, c.labels, figure_window(c.value.items))
+            body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(pic))
+        elif c.shows_figure:
+            body.append('% 3D figure: not exported')
         elif c.error:
             body.append('\\[\\text{\\textcolor{red}{%s}}\\]' % _tex_text(c.error))
         elif c.latex:
             body.append('\\[%s\\]' % c.latex)
+    figures = '% figures: tkz-fct needs gnuplot, compile with  pdflatex --shell-escape\n' \
+        '\\usepackage{tkz-fct}\n\\usepackage{tkz-euclide}\n' if any('tikzpicture' in b for b in body) else ''
     return ('\\documentclass[11pt]{article}\n\\usepackage{amsmath,amssymb,xcolor}\n'
-            '\\usepackage[margin=2cm]{geometry}\n' + _PREAMBLE.get(lang, '') +
+            '\\usepackage[margin=2cm]{geometry}\n' + figures + _PREAMBLE.get(lang, '') +
             '\\begin{document}\n\n' + '\n'.join(body) + '\n\\end{document}\n')
 
 
@@ -190,10 +198,62 @@ def _gp(expr, var):
     return _GnuplotPrinter(var).doprint(expr)
 
 
-def figure_tkz(session, view):
-    """2D figure: tkz-euclide for geometry, tkz-fct for functions (standalone, 2 decimals)."""
-    xmin, xmax, ymin, ymax = (round(view[k]) for k in ('xmin', 'xmax', 'ymin', 'ymax'))
-    defs, draws, fcts, pts, labels, skipped = [], [], [], [], [], []
+def figure_window(items):
+    """[xmin, xmax, ymin, ymax] showing the figure's points, circles... and the functions over that range."""
+    xs, ys = [], []
+    for v in items:
+        if isinstance(v, sp.Point2D):
+            pts = [v]
+        elif isinstance(v, (sp.Segment2D, sp.Ray2D, sp.Line2D)):
+            pts = [v.p1, v.p2]
+        elif isinstance(v, sp.Circle):
+            pts = [v.center + sp.Point(v.radius, v.radius), v.center - sp.Point(v.radius, v.radius)]
+        elif isinstance(v, sp.Polygon):
+            pts = list(v.vertices)
+        elif isinstance(v, runtime.Vec) and v.dim == 2:
+            o = v.origin or sp.Point(0, 0)
+            pts = [o, o + sp.Point(*v.comps)]
+        else:
+            pts = []
+        for q in pts:
+            try:
+                xs.append(float(q.x))
+                ys.append(float(q.y))
+            except (TypeError, ValueError):
+                pass
+    x0, x1 = (min(xs) - 1, max(xs) + 1) if xs else (-6, 6)
+    if x1 - x0 < 4:
+        x0, x1 = (x0 + x1) / 2 - 2, (x0 + x1) / 2 + 2
+    functions = [v for v in items if isinstance(v, (sp.Lambda, runtime.Graph, sp.Equality))]
+    if functions:                         # a graph needs room: at least [-6, 6]
+        x0, x1 = min(x0, -6), max(x1, 6)
+    for v in functions:                   # their values over [x0, x1], |y| <= 10 so steep curves don't flatten the view
+        if isinstance(v, sp.Lambda) and len(v.variables) == 1:
+            e, var = v.expr, v.variables[0]
+        elif isinstance(v, runtime.Graph):
+            e, var = v.expr, v.var
+        elif isinstance(v, sp.Equality) and v.lhs == runtime.y and not v.rhs.has(runtime.y):
+            e, var = v.rhs, runtime.x
+        else:
+            continue
+        f = sp.lambdify(var, e, 'math')
+        for k in range(41):
+            try:
+                yv = float(f(x0 + (x1 - x0) * k / 40))
+            except (ValueError, TypeError, ZeroDivisionError, OverflowError):
+                continue
+            if abs(yv) <= 10:
+                ys.append(yv)
+    y0, y1 = (min(ys) - 1, max(ys) + 1) if ys else (-4, 4)
+    if y1 - y0 < 4:
+        y0, y1 = (y0 + y1) / 2 - 2, (y0 + y1) / 2 + 2
+    return [math.floor(x0), math.ceil(x1), math.floor(y0), math.ceil(y1)]
+
+
+def tikz_picture(items, labels, window):
+    """One 2D figure as a tikzpicture: tkz-euclide for geometry, tkz-fct for functions, 2 decimals."""
+    xmin, xmax, ymin, ymax = window
+    defs, draws, fcts, pts, named, skipped = [], [], [], [], [], []
     aux = [0]
     known = {}      # (x, y) -> point name, so lines reuse A, B instead of new points
 
@@ -208,7 +268,7 @@ def figure_tkz(session, view):
         defs.append('\\tkzDefPoint(%s,%s){%s}' % (fmt(p.x), fmt(p.y), name))
         return name
 
-    def explicit(expr, var, a=None, b=None, label=None):
+    def explicit(expr, var, a=None, b=None):
         dom = '%s:%s' % (fmt(xmin if a is None else a), fmt(xmax if b is None else b))
         fcts.append('\\tkzFct[domain=%s,thick]{%s}' % (dom, _gp(expr, var)))
 
@@ -217,10 +277,10 @@ def figure_tkz(session, view):
             for i in v:
                 draw(i, None)
         elif isinstance(v, sp.Point2D):
-            n = P(v, name if name and name.isascii() else None)
+            n = P(v, name if name and name.isidentifier() and name.isascii() else None)
             pts.append(n)
-            if name:
-                labels.append(n)
+            if n == name:
+                named.append(n)
         elif isinstance(v, sp.Segment2D):
             draws.append('\\tkzDrawSegment(%s,%s)' % (P(v.p1), P(v.p2)))
         elif isinstance(v, sp.Ray2D):
@@ -246,21 +306,35 @@ def figure_tkz(session, view):
         else:
             skipped.append(name or type(v).__name__)
 
-    for c in session.cells:
-        if c.visible and c.dim == 2:
-            draw(c.value, c.name)
-    out = ['% Generated by Kalam. tkz-fct needs gnuplot: compile with  pdflatex --shell-escape',
-           '\\documentclass[tikz,border=3mm]{standalone}',
-           '\\usepackage{tkz-fct}', '\\usepackage{tkz-euclide}',
-           '\\begin{document}', '\\begin{tikzpicture}',
+    for v, name in zip(items, labels):
+        draw(v, name)
+    scale = min(1, 10 / (xmax - xmin), 8 / (ymax - ymin))      # at most 10 cm x 8 cm on the page
+    out = ['\\begin{tikzpicture}[scale=%s]' % fmt(scale),
            '\\tkzInit[xmin=%d,xmax=%d,ymin=%d,ymax=%d]' % (xmin, xmax, ymin, ymax),
            '\\tkzGrid[color=gray!25]', '\\tkzAxeXY', '\\tkzClip[space=.5]']
     out += defs + draws + fcts
     if pts:
         out.append('\\tkzDrawPoints(%s)' % ','.join(pts))
-    if labels:
-        out.append('\\tkzLabelPoints[above right](%s)' % ','.join(labels))
+    if named:
+        out.append('\\tkzLabelPoints[above right](%s)' % ','.join(named))
     if skipped:
         out.append('% not exported (implicit curves, regions...): ' + ', '.join(skipped))
-    out += ['\\end{tikzpicture}', '\\end{document}']
-    return '\n'.join(out) + '\n'
+    return out + ['\\end{tikzpicture}']
+
+
+def _figures(session):
+    return [c for c in session.cells if c.shows_figure]
+
+
+def figure_tkz(session):
+    """Every 2D figure of the notebook, one page each (standalone)."""
+    pics = [tikz_picture(c.value.items, c.labels, figure_window(c.value.items))
+            for c in _figures(session) if dimension(c.value.items[0]) == 2]
+    out = ['% Generated by Kalam. tkz-fct needs gnuplot: compile with  pdflatex --shell-escape',
+           '\\documentclass[tikz,border=3mm]{standalone}',
+           '\\usepackage{tkz-fct}', '\\usepackage{tkz-euclide}', '\\begin{document}']
+    for p in pics:
+        out += p
+    if not pics:
+        out += ['% no 2D figure: draw one with Tracer(...) or Courbe(...)', '\\begin{tikzpicture}\\end{tikzpicture}']
+    return '\n'.join(out + ['\\end{document}']) + '\n'

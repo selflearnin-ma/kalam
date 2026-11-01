@@ -224,7 +224,7 @@ class MainWindow(QMainWindow):
         self._export(to_latex(self.session, self.lang), 'LaTeX (*.tex)', '.tex')
 
     def export_fig(self):
-        self._export(figure_tkz(self.session, self.canvas.view()), 'LaTeX (*.tex)', '_figure.tex')
+        self._export(figure_tkz(self.session), 'LaTeX (*.tex)', '_figures.tex')
 
     def edit_commands(self):
         def saved():

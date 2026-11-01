@@ -243,6 +243,8 @@ class Cell:
         self.norm = None          # normalized source (export)
         self.params = None        # function parameters
         self.parts = []           # text cell: [(is_math, str)]
+        self.labels = None        # figure: name of each object (None if unnamed)
+        self.silent = False       # trailing ;
         self.version = getattr(self, 'version', 0) + 1
 
     @property
@@ -252,6 +254,11 @@ class Cell:
         if self.kind != 'math' or self.value is None or self.name is None:
             return None
         return dimension(self.value)
+
+    @property
+    def shows_figure(self):
+        """The line's output is a figure: Tracer(...), Courbe(...), Graphe3D(...) or the name of one."""
+        return isinstance(self.value, runtime.Figure) and not self.name and not self.silent and not self.error
 
     @property
     def is_free_point(self):
@@ -335,12 +342,14 @@ class Session:
         code, _, note = c.text.partition('#')
         c.note = note.strip() or None              # a comment: never shown, kept in the Python export
         code = code.strip()
-        silent = code.endswith(';')                # trailing ; computes without showing the result
+        silent = c.silent = code.endswith(';')     # trailing ; computes without showing the result
         code = code.rstrip(';').strip()
         if not code:
             return
         try:
             self._evaluate_math(c, code)
+            if isinstance(c.value, runtime.Figure):
+                self._check_figure(c)
             # a definition (f(x) = ..., A = ...) shows nothing; type `f`, `f(x)` or `A` to see a result
             if c.name is None and not silent:
                 c.latex = display_latex(c.value)
@@ -352,6 +361,19 @@ class Session:
         self.env['_c%d' % n] = c.value
         if c.name and c.value is not None:
             self.env[c.name] = c.value
+
+    def _check_figure(self, c):
+        items = c.value.items
+        if not items:
+            raise KalamError('nothing to draw')
+        dims = [dimension(i) for i in items]
+        bad = [i for i, d in zip(items, dims) if d is None]
+        if bad:
+            raise KalamError('cannot be drawn: %s' % ', '.join(map(str, bad)))
+        if len(set(dims)) > 1:
+            raise KalamError('a figure is either 2D or 3D, not both')
+        names = {id(v): k for k, v in self.env.items() if not k.startswith('_c')}
+        c.labels = [names.get(id(i)) for i in items]
 
     def _evaluate_math(self, c, code):
         m = _DEF.match(code)
@@ -550,7 +572,7 @@ def function_latex(name, f):
 
 def display_latex(v):
     """LaTeX of a result: the value only, never a "name =" label (the input line shows the name)."""
-    if v is None:
+    if v is None or isinstance(v, runtime.Figure):      # a figure is drawn, not written
         return ''
     if isinstance(v, sp.Lambda):
         return sp.latex(v.expr)
