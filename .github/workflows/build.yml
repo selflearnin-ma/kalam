@@ -84,7 +84,8 @@ jobs:
     # APPLE_API_ISSUER, APPLE_API_KEY (App Store Connect .p8 content): signed .ipa.
     runs-on: macos-latest
     env:
-      APPLE_DEVELOPMENT_TEAM: ${{ vars.APPLE_DEVELOPMENT_TEAM }}
+      # tauri ios init requires a team id; the placeholder is unused when signing is off
+      APPLE_DEVELOPMENT_TEAM: ${{ vars.APPLE_DEVELOPMENT_TEAM || 'UNSIGNED00' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
