@@ -1,10 +1,15 @@
 # Builds Kalam (web core + Pyodide + Tauri) for every platform.
-# Run it from the Actions tab ("Run workflow"): installers are attached to the run page.
-# Push a tag like v0.1.0: the same build, then a GitHub Release with all installers.
+# Actions tab -> build -> Run workflow: builds everything, then publishes a GitHub Release
+# named after the "release" field (e.g. v0.1.0; leave it empty to only attach files to the run).
+# Pushing a tag like v0.2.0 does the same.
 name: build
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Version to publish as a GitHub Release (empty = no release)
+        default: v0.1.0
   push:
     tags: ['v*']
 
@@ -103,7 +108,7 @@ jobs:
 
   release:
     # only for version tags; iOS is not waited for (it needs Apple signing)
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: ${{ inputs.release != '' || startsWith(github.ref, 'refs/tags/v') }}
     needs: [desktop, android]
     runs-on: ubuntu-22.04
     permissions:
@@ -114,8 +119,9 @@ jobs:
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release || github.ref_name }}
         run: |
           # apk names are generic (app-universal-debug.apk): give it a clear name
-          for f in $(find out/kalam-android -name '*.apk'); do mv "$f" "out/Kalam_${GITHUB_REF_NAME#v}_android.apk"; done
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Kalam $GITHUB_REF_NAME" --generate-notes \
+          for f in $(find out/kalam-android -name '*.apk'); do mv "$f" "out/Kalam_${TAG#v}_android.apk"; done
+          gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "Kalam $TAG" --generate-notes \
             $(find out -type f \( -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' -o -name '*.dmg' -o -name '*.apk' \))
