@@ -67,16 +67,32 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
       - run: npm ci
       - name: Build APK
+        env:
+          # optional: a fixed key so phones accept updates (base64 of a .jks, alias "kalam")
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           export NDK_HOME="$ANDROID_SDK_ROOT/ndk/$NDK_VERSION"
           npx tauri android init --ci
-          # debug build = signed with the debug key, installable directly on a phone.
-          # For the Play Store, add a release keystore and use: npx tauri android build --aab
-          npx tauri android build --debug --apk
+          # release build (optimized) for real phones only: 64- and 32-bit ARM
+          npx tauri android build --apk --target aarch64 armv7
+          unsigned=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release-unsigned.apk' | head -1)
+          if [ -n "$ANDROID_KEYSTORE_B64" ]; then
+            echo "$ANDROID_KEYSTORE_B64" | base64 -d > ks.jks; pass="$ANDROID_KEYSTORE_PASSWORD"
+          else
+            # no key configured: a new key each run (to update, uninstall the old app first)
+            pass=kalam-ci; keytool -genkeypair -keystore ks.jks -alias kalam -keyalg RSA -keysize 2048 \
+              -validity 10000 -storepass "$pass" -keypass "$pass" -dname "CN=Kalam"
+          fi
+          bt=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          mkdir -p apk
+          "$bt/zipalign" -f 4 "$unsigned" aligned.apk
+          "$bt/apksigner" sign --ks ks.jks --ks-key-alias kalam --ks-pass "pass:$pass" --out apk/Kalam_android.apk aligned.apk
+          ls -la apk
       - uses: actions/upload-artifact@v4
         with:
           name: kalam-android
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: apk/*.apk
 
   ios:
     # Without Apple settings: unsigned .ipa (install it with Sideloadly, AltStore or TrollStore).
