@@ -132,9 +132,8 @@ jobs:
           (cd src-tauri && cargo build --release --lib --target aarch64-apple-ios)
           cd src-tauri/gen/apple
           proj=$(ls -d *.xcodeproj | head -1)
-          lib=$(grep -o 'Externals/[^";]*libapp\.a' "$proj/project.pbxproj" | head -1)
-          echo "Xcode expects: $lib"
-          dest=$(echo "${lib:-Externals/arm64/\$(CONFIGURATION)/libapp.a}" | sed -e 's/\$(CONFIGURATION)/release/; s/\${CONFIGURATION}/release/')
+          # device build links Externals/arm64/<configuration>/libapp.a (x86_64 is the simulator)
+          dest=Externals/arm64/release/libapp.a
           mkdir -p "$(dirname "$dest")"
           cp ../../target/aarch64-apple-ios/release/libkalam_lib.a "$dest"
           ls -la "$dest"
