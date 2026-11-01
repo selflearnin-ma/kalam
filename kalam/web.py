@@ -15,7 +15,7 @@ from sympy.printing.jscode import jscode
 
 from . import runtime
 from .commands import CATEGORIES, Registry
-from .engine import Session, dimension
+from .engine import Session
 from .export import figure_tkz, to_latex, to_python
 from .i18n import STRINGS
 
@@ -125,7 +125,7 @@ def _cell_json(c):
     d = dict(kind=c.kind, text=c.text, visible=c.visible, color=c.color, name=c.name,
              latex=c.latex, error=c.error, note=c.note, parts=c.parts)
     if c.kind == 'math' and c.value is not None and not c.error:
-        d['dim'] = dimension(c.value)
+        d['dim'] = c.dim
         d['free'] = c.is_free_point
         d['scene'] = scene(c.value, c.is_free_point) if d['dim'] else []
     if c.slider:

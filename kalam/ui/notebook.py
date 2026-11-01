@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (QColorDialog, QFrame, QHBoxLayout, QLabel, QLineE
                                QPlainTextEdit, QPushButton, QScrollArea, QSizePolicy, QSlider,
                                QToolButton, QVBoxLayout, QWidget)
 
-from ..engine import dimension
 from ..i18n import tr
 from . import mathrender
 
@@ -90,7 +89,7 @@ class CellWidget(QFrame):
     def refresh(self):
         c, s = self.cell, self.nb.session
         self.num.setText(str(s.index(c) + 1))
-        drawable = c.kind == 'math' and dimension(c.value) is not None
+        drawable = c.dim is not None
         self.dot.setVisible(drawable)
         col = cell_color(s, c)
         self.dot.setStyleSheet('QToolButton#dot{border:2px solid %s;border-radius:9px;background:%s}'
@@ -117,10 +116,12 @@ class CellWidget(QFrame):
         code, sep, note = c.text.partition('#')
         code = re.sub(r'([\u0600-\u06FF][\u0600-\u06FF_\w]*)', '\u200e\\1\u200e', html.escape(code))
         code += html.escape(sep) + '<span dir="auto">%s</span>' % html.escape(note) if sep else ''
-        src = '<div dir="ltr" style="color:#8a909c;font-family:monospace;font-size:11px">%s</div>' % code
+        quiet = c.latex or c.error         # a definition has no result: show its input in full ink
+        src = '<div dir="ltr" style="color:%s;font-family:monospace;font-size:%s">%s</div>' % (
+            '#8a909c' if quiet else '#1f2430', '11px' if quiet else '13px', code)
         if c.error:
             return src + '<div style="color:#c92a2a">⚠ %s</div>' % html.escape(c.error)
-        if c.value is None:
+        if c.value is None or not c.latex:
             return src
         math = mathrender.html_math(c.latex, 14)
         if math is None:      # matrices and other formulas mathtext can't draw

@@ -6,7 +6,6 @@ from matplotlib.figure import Figure
 from sympy.geometry.line import LinearEntity3D
 
 from .. import runtime
-from ..engine import dimension
 from .canvas2d import _numeric, _real
 from .notebook import cell_color
 
@@ -49,7 +48,7 @@ class View3D(FigureCanvasQTAgg):
             seg[:, k] = (-R, R)
             ax.plot(*seg.T, color='#3b4250', lw=1)
         for c in self.session.cells:
-            if c.kind == 'math' and c.visible and c.value is not None and dimension(c.value) == 3:
+            if c.visible and c.dim == 3:
                 try:
                     self.draw_obj(c.value, cell_color(self.session, c), c.name)
                 except Exception as e:

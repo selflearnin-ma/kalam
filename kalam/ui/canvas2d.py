@@ -9,7 +9,6 @@ from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPainterPath, QPen, Q
 from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
 
 from .. import runtime
-from ..engine import dimension
 from .notebook import cell_color
 
 X, Y = runtime.x, runtime.y
@@ -105,7 +104,7 @@ class Canvas2D(QWidget):
     # ------------------------------------------------------------ painting
     def objects(self):
         for c in self.session.cells:
-            if c.kind == 'math' and c.visible and c.value is not None and dimension(c.value) == 2:
+            if c.visible and c.dim == 2:
                 yield c
 
     def paintEvent(self, _):

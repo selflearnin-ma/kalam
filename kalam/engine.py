@@ -229,6 +229,13 @@ class Cell:
         self.version = getattr(self, 'version', 0) + 1
 
     @property
+    def dim(self):
+        """2 or 3 when the cell draws something. A bare name (`f`, `A`) only shows a value: no second copy."""
+        if self.kind != 'math' or self.value is None or self.text.partition('#')[0].strip().isidentifier():
+            return None
+        return dimension(self.value)
+
+    @property
     def is_free_point(self):
         m = _DEF.match(self.text.partition('#')[0]) if self.kind == 'math' else None
         if not m or m.group(2) is not None:
@@ -306,7 +313,11 @@ class Session:
             return
         try:
             self._evaluate_math(c, code.strip())
-            c.latex = display_latex(c.value)
+            # a definition (f(x) = ..., A = ...) shows nothing; type `f`, `f(x)` or `A` to see a result
+            if c.name is None:
+                c.latex = display_latex(c.value)
+                if isinstance(c.value, sp.Lambda) and code.strip().isidentifier():
+                    c.latex = function_latex(code.strip(), c.value)
         except Exception as e:  # any CAS failure is shown in the cell, never raised
             c.error = str(e) if isinstance(e, KalamError) else '%s: %s' % (type(e).__name__, e)
             c.value = None
@@ -429,6 +440,14 @@ def value_latex(v):
     if isinstance(v, dict):
         return r'\left\{%s\right\}' % ', '.join('%s: %s' % (value_latex(k), value_latex(i)) for k, i in v.items())
     return L(v)
+
+
+def function_latex(name, f):
+    """f : x ↦ x² − 4 (a bare function name typed alone)."""
+    n = name if name.isascii() else r'\text{%s}' % name
+    vs = ', '.join(sp.latex(s) for s in f.variables)
+    vs = vs if len(f.variables) == 1 else r'\left(%s\right)' % vs
+    return r'%s : %s \mapsto %s' % (n, vs, sp.latex(f.expr))
 
 
 def display_latex(v):

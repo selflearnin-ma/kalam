@@ -35,8 +35,14 @@ def test_languages_and_parsing():
     assert v[8] == 5 * x + 2
     assert v[9] == -1 and v[10] == 122 and v[11] == sp.Rational(3, 4)
     assert v[12] == v[6]
-    # results show the value only, never "A =" (the input line shows the name)
-    assert s.cells[0].latex == r'\left(1, 2\right)' and s.cells[4].latex == 'x^{2} - 2 x - 3'
+    # a definition shows nothing; results only when asked for
+    assert s.cells[0].latex == '' and s.cells[4].latex == ''
+    s.add_cell('A')
+    s.add_cell('f')
+    s.add_cell('f(x)')
+    s.evaluate_all()
+    assert [c.latex for c in s.cells[-3:]] == [r'\left(1, 2\right)', r'f : x \mapsto x^{2} - 2 x - 3', 'x^{2} - 2 x - 3']
+    assert [c.dim for c in s.cells[-3:]] == [None, None, None]     # a bare name shows, it does not draw again
 
 
 def test_drawables():
@@ -77,7 +83,7 @@ def test_exports():
         s2, _, _ = load_klm(klm, s.registry)
         assert [c.latex for c in s2.cells] == [c.latex for c in s.cells]
     tex = to_latex(s)
-    assert '\\begin{document}' in tex and 'x^{2}' in tex
+    assert '\\begin{document}' in tex and '\\left\\{-2, 2\\right\\}' in tex   # Solve(f(x) = 4, x)
     fig = figure_tkz(s, dict(xmin=-5, xmax=5, ymin=-5, ymax=5))
     assert '\\tkzDefPoint(1,2){A}' in fig and '\\tkzFct' in fig and '\\tkzDrawCircle' in fig
 
