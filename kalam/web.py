@@ -123,7 +123,7 @@ def _scene(v, free):
 # ---------------------------------------------------------------- state
 def _cell_json(c):
     d = dict(kind=c.kind, text=c.text, visible=c.visible, color=c.color, name=c.name,
-             label=c.label, latex=c.latex, error=c.error, note=c.note, parts=c.parts)
+             latex=c.latex, error=c.error, note=c.note, parts=c.parts)
     if c.kind == 'math' and c.value is not None and not c.error:
         d['dim'] = dimension(c.value)
         d['free'] = c.is_free_point

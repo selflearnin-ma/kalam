@@ -222,7 +222,7 @@ class Cell:
 
     def reset(self):
         self.name = self.value = self.error = self.slider = self.note = None
-        self.latex = self.label = ''
+        self.latex = ''
         self.norm = None          # normalized source (export)
         self.params = None        # function parameters
         self.parts = []           # text cell: [(is_math, str)]
@@ -306,7 +306,7 @@ class Session:
             return
         try:
             self._evaluate_math(c, code.strip())
-            c.label, c.latex = display_latex(c.name, c.value, c.params)
+            c.latex = display_latex(c.value)
         except Exception as e:  # any CAS failure is shown in the cell, never raised
             c.error = str(e) if isinstance(e, KalamError) else '%s: %s' % (type(e).__name__, e)
             c.value = None
@@ -431,12 +431,12 @@ def value_latex(v):
     return L(v)
 
 
-def display_latex(name, v, params=None):
-    """(label, latex body). The label is plain text (any script) drawn by the UI."""
+def display_latex(v):
+    """LaTeX of a result: the value only, never a "name =" label (the input line shows the name)."""
     if v is None:
-        return '', ''
-    if isinstance(v, sp.Lambda) and name:
-        return '%s(%s) =' % (name, ', '.join(params or [str(s) for s in v.variables])), sp.latex(v.expr)
+        return ''
+    if isinstance(v, sp.Lambda):
+        return sp.latex(v.expr)
     body = value_latex(v)
     if isinstance(v, sp.Expr) and not v.free_symbols and v.is_number and not v.is_rational \
             and not v.has(sp.oo, -sp.oo, sp.zoo, sp.nan) and not isinstance(v, sp.Float):
@@ -444,12 +444,7 @@ def display_latex(name, v, params=None):
             body += r' \approx ' + sp.latex(sp.N(v, 6))
         except Exception:
             pass
-    if not name:
-        return '', body
-    if isinstance(v, (sp.Equality, sp.Rel, sp.Line2D, sp.Circle, sp.Plane, runtime.Graph,
-                      runtime.Surface, runtime.SphereObj)):
-        return name + ' :', body
-    return name + ' =', body
+    return body
 
 
 # ---------------------------------------------------------------- drawable kind

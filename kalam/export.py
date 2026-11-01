@@ -157,9 +157,8 @@ def to_latex(session, lang='fr'):
         if c.error:
             body.append('\\[\\text{\\textcolor{red}{%s}}\\]' % _tex_text(c.error))
         elif c.latex:
-            label = ('\\text{%s}\\ ' % _tex_text(c.label)) if c.label else ''
             note = ('\\quad\\text{%s}' % _tex_text(c.note)) if c.note else ''
-            body.append('\\[%s%s%s\\]' % (label, c.latex, note))
+            body.append('\\[%s%s\\]' % (c.latex, note))
     return ('\\documentclass[11pt]{article}\n\\usepackage{amsmath,amssymb,xcolor}\n'
             '\\usepackage[margin=2cm]{geometry}\n' + _PREAMBLE.get(lang, '') +
             '\\begin{document}\n\n' + '\n'.join(body) + '\n\\end{document}\n')

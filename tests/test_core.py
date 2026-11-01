@@ -35,6 +35,8 @@ def test_languages_and_parsing():
     assert v[8] == 5 * x + 2
     assert v[9] == -1 and v[10] == 122 and v[11] == sp.Rational(3, 4)
     assert v[12] == v[6]
+    # results show the value only, never "A =" (the input line shows the name)
+    assert s.cells[0].latex == r'\left(1, 2\right)' and s.cells[4].latex == 'x^{2} - 2 x - 3'
 
 
 def test_drawables():

@@ -64,7 +64,6 @@ main { flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-co
 .src { font-family: var(--mono); font-size: 12px; color: var(--faint); white-space: pre-wrap; word-break: break-word; }
 .out { font-size: 15px; overflow-x: auto; min-height: 22px; cursor: text; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .out mjx-container { margin: 0 !important; }
-.lbl { font-style: italic; white-space: nowrap; }
 .note { color: var(--muted); font-style: italic; font-size: 13px; }
 .err { color: var(--danger); font-size: 13px; }
 .ph { color: var(--faint); cursor: text; }
@@ -238,7 +237,15 @@ function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<':
 const mjCache = new Map();
 function tex(src) {
   if (!window.MathJax || !MathJax.tex2svg) return Object.assign(document.createElement('code'), { textContent: src });
-  if (!mjCache.has(src)) { try { mjCache.set(src, MathJax.tex2svg(src, { display: false })); } catch (e) { mjCache.set(src, Object.assign(document.createElement('code'), { textContent: src })); } }
+  if (!mjCache.has(src)) {
+    try {
+      const node = MathJax.tex2svg(src, { display: false });
+      // the hidden MathML copy shows as duplicate text in WebKitGTK (Linux app): drop it, label the formula instead
+      node.querySelectorAll('mjx-assistive-mml').forEach(m => m.remove());
+      node.setAttribute('role', 'img'); node.setAttribute('aria-label', src);
+      mjCache.set(src, node);
+    } catch (e) { mjCache.set(src, Object.assign(document.createElement('code'), { textContent: src })); }
+  }
   return mjCache.get(src).cloneNode(true);
 }
 let saveT;
@@ -320,7 +327,6 @@ function cellEl(c, i) {
     const out = document.createElement('div'); out.className = 'out'; out.dir = 'ltr';
     if (c.error) out.innerHTML = `<span class="err">⚠ ${esc(c.error)}</span>`;
     else if (c.latex) {
-      if (c.label) out.appendChild(Object.assign(document.createElement('span'), { className: 'lbl', textContent: c.label, dir: 'auto' }));
       out.appendChild(tex(c.latex));
       if (c.note) out.appendChild(Object.assign(document.createElement('span'), { className: 'note', textContent: c.note, dir: 'auto' }));
     }
@@ -356,7 +362,9 @@ function commit(i, text, next) {
 }
 function editKey(e, i, ed) {
   const math = ed.tagName === 'INPUT';
-  if (e.key === 'Enter' && (math || e.ctrlKey || e.shiftKey || e.metaKey)) { e.preventDefault(); commit(i, ed.value, true); }
+  // Ctrl/Cmd+Enter: evaluate and stay on this cell; Enter (math) or Shift+Enter: evaluate and go to the next cell
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(i, ed.value, false); }
+  else if (e.key === 'Enter' && (math || e.shiftKey)) { e.preventDefault(); commit(i, ed.value, true); }
   else if (e.key === 'Escape') { editing = -1; renderNotebook(); }
   else if (math && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
     e.preventDefault(); const j = i + (e.key === 'ArrowUp' ? -1 : 1);

@@ -122,14 +122,12 @@ class CellWidget(QFrame):
             return src + '<div style="color:#c92a2a">⚠ %s</div>' % html.escape(c.error)
         if c.value is None:
             return src
-        label = '<span style="font-family:serif;font-style:italic;font-size:15px">%s</span>&nbsp;' % \
-            html.escape(c.label) if c.label else ''
         math = mathrender.html_math(c.latex, 14)
         if math is None:      # matrices and other formulas mathtext can't draw
             math = '<pre style="margin:0">%s</pre>' % html.escape(sp.pretty(c.value, use_unicode=True))
         note = '&nbsp;&nbsp;<span style="color:#6b7280;font-style:italic">%s</span>' % html.escape(c.note) \
             if c.note else ''
-        return src + '<div dir="ltr" style="margin-top:2px">%s%s%s</div>' % (label, math, note)
+        return src + '<div dir="ltr" style="margin-top:2px">%s%s</div>' % (math, note)
 
     # ------------------------------------------------------------ editing
     def start_edit(self):
@@ -162,7 +160,10 @@ class CellWidget(QFrame):
         if e.type() == QEvent.KeyPress:
             k, mod = e.key(), e.modifiers()
             enter = k in (Qt.Key_Return, Qt.Key_Enter)
-            if enter and (isinstance(self.editor, QLineEdit) or mod & (Qt.ControlModifier | Qt.ShiftModifier)):
+            if enter and mod & Qt.ControlModifier:          # evaluate, stay on this cell
+                self.commit(go_next=False)
+                return True
+            if enter and (isinstance(self.editor, QLineEdit) or mod & Qt.ShiftModifier):
                 self.commit()
                 return True
             if k == Qt.Key_Escape:
