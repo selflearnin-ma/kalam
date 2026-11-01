@@ -1,88 +1,100 @@
 {
  "format": "kalam",
- "version": 1,
+ "version": 2,
  "lang": "ar",
  "view2d": {
-  "cx": 0,
+  "cx": 0.5,
   "cy": 0,
   "scale": 45
  },
  "cells": [
   {
-   "kind": "math",
    "text": "f(x) = x^3 - 3x",
+   "block": 28,
    "visible": true,
    "color": null
   },
   {
-   "kind": "text",
-   "text": "ندرس الدالة $f$ حيث {{f(x)}}",
+   "text": "\"نعتبر الدالة $f$ المعرفة على $\\mathbb{R}$ بما يلي $f(x) = {{f(x)}}$\"",
+   "block": 28,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
-   "text": "حل(f(x) = 0, x)  # جذور الدالة",
+   "text": "\"حلول المعادلة $f(x) = 0$ هي\"",
+   "block": 28,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
-   "text": "مشتقة(f)",
+   "text": "حل(f(x) = 0, x)",
+   "block": 28,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
+   "text": "\"مشتقة الدالة هي $f'(x) = {{مشتقة(f)(x)}}$\"",
+   "block": 28,
+   "visible": true,
+   "color": null
+  },
+  {
    "text": "م = مماس(f, 2)",
+   "block": 34,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
+   "text": "\"معادلة المماس عند النقطة ذات الأفصول $2$ هي\"",
+   "block": 34,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "م",
+   "block": 34,
+   "visible": true,
+   "color": null
+  },
+  {
    "text": "A = (-3, -2)",
+   "block": 38,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
    "text": "B = (2, 3)",
+   "block": 38,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
    "text": "C = (3, -1)",
+   "block": 38,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
    "text": "ث = مضلع(A, B, C)",
+   "block": 38,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
    "text": "ع = منتصف(A, B)",
+   "block": 38,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
-   "text": "نهاية(sin(x)/x, x, 0)",
+   "text": "\"منتصف القطعة $[AB]$ هو النقطة $({{ع}})$\"",
+   "block": 38,
    "visible": true,
    "color": null
   },
   {
-   "kind": "math",
-   "text": "تكامل(f, 0, 2)",
-   "visible": true,
-   "color": null
-  },
-  {
-   "kind": "math",
    "text": "S = فلكة((0, 0, 0), 3)",
+   "block": 45,
    "visible": true,
    "color": null
   }

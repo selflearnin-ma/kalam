@@ -70,7 +70,9 @@ main { flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-co
 .ph { color: var(--faint); cursor: text; }
 .txt { font-size: 15px; line-height: 1.55; cursor: text; overflow-wrap: anywhere; }
 .ed { width: 100%; border: none; background: transparent; outline: none; font-family: var(--mono); font-size: 15px; padding: 3px 0; }
-textarea.ed { font-family: var(--font); resize: vertical; min-height: 64px; }
+textarea.ed { resize: vertical; min-height: 48px; line-height: 1.5; }
+.slrow { display: flex; gap: 10px; align-items: center; }
+.slv { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; direction: ltr; }
 .edrow { display: flex; gap: 6px; align-items: start; }
 .ok { border: none; background: var(--accent); color: var(--panel); border-radius: 7px; padding: 4px 10px; font-size: 13px; }
 .more { border: none; background: none; color: var(--faint); border-radius: 6px; height: 26px; font-size: 18px; line-height: 1; }
@@ -219,7 +221,7 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { ret
                 set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 
 let W = null;                 // kalam.web module (Pyodide proxy)
-let S = { cells: [] };        // last state from Python
+let S = { cells: [], blocks: [] };   // last state from Python (see setState)
 let CAT = null;               // commands + strings
 let lang = store.get('kalam.lang') || ((navigator.language || 'fr').slice(0, 2) in { ar: 1, en: 1 } ? navigator.language.slice(0, 2) : 'fr');
 let editing = -1, view3dOn = false;
@@ -231,7 +233,7 @@ function call(fn, ...args) {
   catch (e) { toast(pyErr(e)); throw e; }
 }
 function pyErr(e) { const m = String(e.message || e).trim().split('\n'); return m[m.length - 1]; }
-function apply(json) { S = JSON.parse(json); render(); scheduleSave(); }
+function apply(json) { setState(json); render(); scheduleSave(); }
 function color(c, i) { return c.color || COLORS[i % COLORS.length]; }
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -283,7 +285,7 @@ $('#ptabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { 
 $('#pbtns').onmousedown = e => e.preventDefault();   // keep the editor focused
 $('#pbtns').onclick = e => {
   const b = e.target.closest('[data-ins]'); if (!b) return;
-  if (editing < 0) startEdit(S.cells.length - 1);
+  if (editing < 0) startEdit(S.blocks.length - 1);
   const ed = document.querySelector('.cell.editing .ed'); if (!ed) return;
   ed.setRangeText(b.dataset.ins, ed.selectionStart, ed.selectionEnd, 'end');
   if (b.dataset.back) ed.selectionStart = ed.selectionEnd = ed.selectionEnd - 1;
@@ -291,56 +293,67 @@ $('#pbtns').onclick = e => {
 };
 
 // ------------------------------------------------------------------ notebook
+// S.cells = lines (the engine's unit: drawing, points, sliders); S.blocks = cells on screen (groups of lines)
+function setState(json) {
+  S = JSON.parse(json); S.cells = S.lines; S.blocks = [];
+  S.cells.forEach((c, i) => {
+    const last = S.blocks[S.blocks.length - 1];
+    if (last && last.id === c.block) last.lines.push(i); else S.blocks.push({ id: c.block, lines: [i] });
+  });
+}
+function blockText(b) { return S.blocks[b].lines.map(i => S.cells[i].text).join('\n'); }
 function render() { renderNotebook(); draw2d(); if (view3dOn) draw3d(); }
 function renderNotebook() {
   const nb = $('#nb'); nb.textContent = '';
-  S.cells.forEach((c, i) => nb.appendChild(cellEl(c, i)));
+  S.blocks.forEach((b, k) => nb.appendChild(cellEl(k)));
   const adds = document.createElement('div'); adds.className = 'adds';
-  adds.innerHTML = `<button data-add="math">${esc(tr('add_math'))}</button><button data-add="text">${esc(tr('add_text'))}</button>`;
+  adds.innerHTML = `<button data-add="1">${esc(tr('add_math'))}</button>`;
   nb.appendChild(adds);
-  if (editing >= 0) { const ed = nb.querySelector('.cell.editing .ed'); if (ed) { ed.focus(); ed.selectionStart = ed.selectionEnd = ed.value.length; } }
+  const ed = nb.querySelector('.cell.editing .ed');
+  if (ed) { ed.focus(); ed.selectionStart = ed.selectionEnd = ed.value.length; }
 }
-function cellEl(c, i) {
-  const el = document.createElement('div'); el.className = 'cell' + (i === editing ? ' editing' : ''); el.dataset.i = i;
-  const col = color(c, i);
-  const drawable = c.kind === 'math' && c.dim;
-  el.innerHTML = `<div class="gut"><span class="num">${i + 1}</span>${drawable ? `<button class="dot ${c.visible ? 'on' : ''}" style="color:${col}" data-act="vis" aria-label="${esc(tr('show'))}"></button>` : ''}</div>
-    <div class="body"></div><button class="more" data-act="menu" aria-label="⋯">⋯</button>`;
+function cellEl(k) {
+  const lines = S.blocks[k].lines, el = document.createElement('div');
+  el.className = 'cell' + (k === editing ? ' editing' : ''); el.dataset.b = k;
+  const dots = lines.filter(i => S.cells[i].dim).map(i => { const c = S.cells[i];
+    return `<button class="dot ${c.visible ? 'on' : ''}" style="color:${color(c, i)}" data-vis="${i}" title="${esc(c.text)}" aria-label="${esc(tr('show') + ' ' + c.text)}"></button>`; }).join('');
+  el.innerHTML = `<div class="gut"><span class="num">${k + 1}</span>${dots}</div><div class="body"></div><button class="more" data-act="menu" aria-label="⋯">⋯</button>`;
   const body = el.querySelector('.body');
-  if (i === editing) {
-    const ed = document.createElement(c.kind === 'math' ? 'input' : 'textarea');
-    ed.className = 'ed'; ed.value = c.text; ed.spellcheck = false;
-    if (c.kind === 'math') { ed.dir = 'ltr'; ed.placeholder = tr('placeholder'); ed.enterKeyHint = 'done'; ed.autocapitalize = 'off'; ed.autocomplete = 'off'; }
-    else { ed.dir = 'auto'; ed.placeholder = tr('text_placeholder'); }
+  if (k === editing) {
+    const ed = document.createElement('textarea');
+    ed.className = 'ed'; ed.value = blockText(k); ed.spellcheck = false; ed.dir = 'auto';
+    ed.placeholder = tr('placeholder'); ed.autocapitalize = 'off'; ed.autocomplete = 'off';
+    ed.rows = Math.max(2, ed.value.split('\n').length + 1);
+    ed.oninput = () => { ed.rows = Math.max(2, ed.value.split('\n').length + 1); };
     const row = document.createElement('div'); row.className = 'edrow';
-    row.append(ed, Object.assign(document.createElement('button'), { className: 'ok', textContent: '✓', title: tr('done'), onclick: () => commit(i, ed.value, true) }));
-    ed.addEventListener('keydown', e => editKey(e, i, ed));
+    row.append(ed, Object.assign(document.createElement('button'), { className: 'ok', textContent: '✓', title: tr('done'), onclick: () => commit(k, ed.value, false) }));
+    ed.addEventListener('keydown', e => editKey(e, k, ed));
     body.appendChild(row);
-  } else if (c.kind === 'text') {
-    const t = document.createElement('div'); t.className = 'txt'; t.dir = 'auto';
-    if (!c.text.trim()) t.innerHTML = `<span class="ph">${esc(tr('text_placeholder'))}</span>`;
-    else textParts(t, c.parts);
-    body.appendChild(t);
-  } else if (!c.text.trim()) {
-    body.innerHTML = `<div class="ph">${esc(tr('placeholder'))}</div>`;
-  } else {
-    // a definition has no result: its input is the whole cell, shown in full ink
-    body.innerHTML = `<div class="src${c.latex || c.error ? '' : ' def'}" dir="ltr">${esc(c.text)}</div>`;
-    const out = document.createElement('div'); out.className = 'out'; out.dir = 'ltr';
-    if (c.error) out.innerHTML = `<span class="err">⚠ ${esc(c.error)}</span>`;
-    else if (c.latex) {
-      out.appendChild(tex(c.latex));
-      if (c.note) out.appendChild(Object.assign(document.createElement('span'), { className: 'note', textContent: c.note, dir: 'auto' }));
-    }
-    body.appendChild(out);
+    return el;
   }
-  if (c.slider) {
-    const s = c.slider, r = document.createElement('input');
-    Object.assign(r, { type: 'range', min: s.lo, max: s.hi, step: s.step, value: s.value });
-    r.setAttribute('aria-label', c.name || 'slider');
-    r.oninput = () => slide(i, +r.value);
-    r.onchange = () => renderNotebook();
-    body.appendChild(r);
+  let shown = 0;
+  for (const i of lines) {
+    const c = S.cells[i];
+    if (c.text_line) {
+      const t = document.createElement('div'); t.className = 'txt'; t.dir = 'auto'; textParts(t, c.parts); body.appendChild(t); shown++;
+    } else if (c.error) {
+      const d = document.createElement('div'); d.className = 'err'; d.dir = 'ltr'; d.textContent = `⚠ ${c.text} : ${c.error}`; body.appendChild(d); shown++;
+    } else if (c.latex) {
+      const out = document.createElement('div'); out.className = 'out'; out.dir = 'ltr'; out.appendChild(tex(c.latex)); body.appendChild(out); shown++;
+    }
+    if (c.slider) {
+      const sl = c.slider, row = document.createElement('div'), r = document.createElement('input'); row.className = 'slrow';
+      Object.assign(r, { type: 'range', min: sl.lo, max: sl.hi, step: sl.step, value: sl.value });
+      r.setAttribute('aria-label', c.name || 'slider');
+      const v = Object.assign(document.createElement('span'), { className: 'slv', textContent: `${c.name} ${+sl.value.toFixed(4)}` });
+      r.oninput = () => { v.textContent = `${c.name} ${+(+r.value).toFixed(4)}`; slide(i, +r.value); };
+      r.onchange = () => renderNotebook();
+      row.append(r, v); body.appendChild(row); shown++;
+    }
+  }
+  if (!shown) {     // only definitions (or empty): the code is the whole cell
+    const text = blockText(k);
+    body.innerHTML = text.trim() ? `<div class="src def" dir="ltr">${esc(text)}</div>` : `<div class="ph">${esc(tr('placeholder'))}</div>`;
   }
   return el;
 }
@@ -353,53 +366,47 @@ function textParts(el, parts) {
     });
   }
 }
-function startEdit(i) { editing = i; renderNotebook(); }
-function commit(i, text, next) {
-  const c = S.cells[i];
+function startEdit(k) { editing = k; renderNotebook(); }
+function commit(k, text, next) {
   editing = -1;
-  if (text !== c.text) apply(call('set_text', i, text)); else renderNotebook();
-  if (!next) return;
-  if (i === S.cells.length - 1 && text.trim()) apply(call('insert', i + 1, 'math', ''));
-  if (i + 1 < S.cells.length) startEdit(i + 1);
+  if (text !== blockText(k)) apply(call('set_cell', k, text)); else renderNotebook();
+  if (!next) { editing = k; return renderNotebook(); }    // stay on the cell, ready to edit again
+  if (k === S.blocks.length - 1 && text.trim()) apply(call('insert_cell', k + 1, ''));
+  if (k + 1 < S.blocks.length) startEdit(k + 1);
 }
-function editKey(e, i, ed) {
-  const math = ed.tagName === 'INPUT';
-  // Ctrl/Cmd+Enter: evaluate and stay on this cell; Enter (math) or Shift+Enter: evaluate and go to the next cell
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(i, ed.value, false); }
-  else if (e.key === 'Enter' && (math || e.shiftKey)) { e.preventDefault(); commit(i, ed.value, true); }
+function editKey(e, k, ed) {
+  // Enter: new line; Ctrl/Cmd+Enter: evaluate, stay on the cell; Shift+Enter: evaluate, go to the next cell
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(k, ed.value, false); }
+  else if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); commit(k, ed.value, true); }
   else if (e.key === 'Escape') { editing = -1; renderNotebook(); }
-  else if (math && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-    e.preventDefault(); const j = i + (e.key === 'ArrowUp' ? -1 : 1);
-    commit(i, ed.value, false); if (j >= 0 && j < S.cells.length) startEdit(j);
-  }
 }
 $('#nb').onclick = e => {
-  const add = e.target.closest('[data-add]');
-  if (add) { const n = S.cells.length; apply(call('insert', n, add.dataset.add, '')); startEdit(n); return; }
+  if (e.target.closest('[data-add]')) { const n = S.blocks.length; apply(call('insert_cell', n, '')); startEdit(n); return; }
+  const vis = e.target.closest('[data-vis]');
+  if (vis) { const i = +vis.dataset.vis, c = S.cells[i]; apply(call('set_style', i, !c.visible, c.color || '')); return; }
   const cell = e.target.closest('.cell'); if (!cell) return;
-  const i = +cell.dataset.i, act = e.target.closest('[data-act]');
-  if (act && act.dataset.act === 'vis') { const c = S.cells[i]; apply(call('set_style', i, !c.visible, c.color || '')); return; }
-  if (act && act.dataset.act === 'menu') { cellMenu(i, act); return; }
-  if (i !== editing && !e.target.closest('input[type=range]')) {
-    if (editing >= 0) { const ed = document.querySelector('.cell.editing .ed'); commit(editing, ed.value, false); }
-    startEdit(i);
+  const k = +cell.dataset.b, act = e.target.closest('[data-act]');
+  if (act && act.dataset.act === 'menu') { cellMenu(k, act); return; }
+  if (k !== editing && !e.target.closest('input[type=range]')) {
+    if (editing >= 0) { const ed = document.querySelector('.cell.editing .ed'); if (ed && ed.value !== blockText(editing)) apply(call('set_cell', editing, ed.value)); }
+    startEdit(k);
   }
 };
-function cellMenu(i, anchor) {
+function cellMenu(k, anchor) {
   closeMenu();
-  const c = S.cells[i], m = document.createElement('div'); m.className = 'menu';
-  const item = (k, fn) => { const b = document.createElement('button'); b.textContent = tr(k); b.onclick = () => { closeMenu(); fn(); }; m.appendChild(b); };
-  item('insert_above', () => { apply(call('insert', i, 'math', '')); startEdit(i); });
-  item('insert_below', () => { apply(call('insert', i + 1, 'math', '')); startEdit(i + 1); });
-  if (i > 0) item('move_up', () => apply(call('move', i, i - 1)));
-  if (i < S.cells.length - 1) item('move_down', () => apply(call('move', i, i + 1)));
-  item(c.kind === 'text' ? 'to_math' : 'to_text', () => apply(call('set_kind', i, c.kind === 'text' ? 'math' : 'text')));
-  if (c.kind === 'math' && c.dim) {
-    const l = document.createElement('label'); l.innerHTML = `<input type="color" value="${color(c, i)}"> ${esc(tr('color'))}`;
+  const m = document.createElement('div'); m.className = 'menu';
+  const item = (key, fn) => { const b = document.createElement('button'); b.textContent = tr(key); b.onclick = () => { closeMenu(); fn(); }; m.appendChild(b); };
+  item('insert_above', () => { editing = -1; apply(call('insert_cell', k, '')); startEdit(k); });
+  item('insert_below', () => { editing = -1; apply(call('insert_cell', k + 1, '')); startEdit(k + 1); });
+  if (k > 0) item('move_up', () => { editing = -1; apply(call('move_cell', k, -1)); });
+  if (k < S.blocks.length - 1) item('move_down', () => { editing = -1; apply(call('move_cell', k, 1)); });
+  for (const i of S.blocks[k].lines.filter(i => S.cells[i].dim)) {     // one colour per drawn object
+    const c = S.cells[i], l = document.createElement('label');
+    l.innerHTML = `<input type="color" value="${color(c, i)}"> <span dir="ltr">${esc(tr('color'))} ${esc(c.name || c.text)}</span>`;
     l.querySelector('input').onchange = ev => { closeMenu(); apply(call('set_style', i, c.visible, ev.target.value)); };
     m.appendChild(l);
   }
-  item('delete', () => { editing = -1; apply(call('delete', i)); });
+  item('delete', () => { editing = -1; apply(call('delete_cell', k)); });
   document.body.appendChild(m);
   const r = anchor.getBoundingClientRect();
   m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
@@ -412,7 +419,7 @@ function closeMenu() { document.querySelectorAll('.menu').forEach(m => m.remove(
 // one Python call in flight per animation frame while dragging/sliding
 let pending = null;
 function throttled(fn) { const first = !pending; pending = fn; if (first) requestAnimationFrame(() => { const f = pending; pending = null; f(); }); }
-function slide(i, v) { throttled(() => { S = JSON.parse(call('move_slider', i, v)); draw2d(); if (view3dOn) draw3d(); scheduleSave(); }); }
+function slide(i, v) { throttled(() => { setState(call('move_slider', i, v)); draw2d(); if (view3dOn) draw3d(); scheduleSave(); }); }
 
 // ------------------------------------------------------------------ 2D view
 const cv = $('#c2d'), g = cv.getContext('2d');
@@ -457,7 +464,7 @@ function draw2d() {
   // objects
   const pts = [];
   S.cells.forEach((c, i) => {
-    if (c.kind !== 'math' || !c.visible || c.dim !== 2 || !c.scene) return;
+    if (!c.visible || c.dim !== 2 || !c.scene) return;
     const col = color(c, i);
     for (const p of c.scene) { try { prim(p, col, c.name, pts, i, v); } catch (e) { /* skip one bad object */ } }
   });
@@ -577,7 +584,7 @@ cv.addEventListener('pointermove', e => {
   else if (drag.pt != null) {
     const snap = u => Math.abs(u - Math.round(u)) < 12 / V.s ? Math.round(u) : Math.round(u * 10) / 10;
     const i = drag.pt, px = snap(WX(x)), py = snap(WY(y));
-    throttled(() => { S = JSON.parse(call('move_point', i, px, py)); draw2d(); if (view3dOn) draw3d(); });
+    throttled(() => { setState(call('move_point', i, px, py)); draw2d(); if (view3dOn) draw3d(); });
     drag.moved = true;
   }
 });
@@ -639,7 +646,7 @@ function traces3d(p, col, name) {
 async function draw3d() {
   try { await loadPlotly(); } catch (e) { $('#c3d').textContent = 'Plotly could not load.'; return; }
   const T = [];
-  S.cells.forEach((c, i) => { if (c.kind === 'math' && c.visible && c.dim === 3 && c.scene) for (const p of c.scene) { try { T.push(...traces3d(p, color(c, i), c.name)); } catch (e) {} } });
+  S.cells.forEach((c, i) => { if (c.visible && c.dim === 3 && c.scene) for (const p of c.scene) { try { T.push(...traces3d(p, color(c, i), c.name)); } catch (e) {} } });
   const ax = t => ({ range: [-R3, R3], title: { text: t }, gridcolor: css('--grid-major'), zerolinecolor: css('--axis'), backgroundcolor: css('--bg'), showbackground: true, color: css('--muted') });
   Plotly.react('c3d', T, { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: css('--panel'), showlegend: false, uirevision: 'k',
     font: { family: css('--font'), color: css('--ink') }, scene: { xaxis: ax('x'), yaxis: ax('y'), zaxis: ax('z'), aspectmode: 'cube' } },
@@ -756,7 +763,7 @@ async function boot() {
     const saved = store.get('kalam.nb');
     const r = JSON.parse(W.load_klm_text(saved || JSON.stringify(DEMO[lang] || DEMO.fr)));
     if (r.view && r.view.scale) V = { cx: r.view.cx || 0, cy: r.view.cy || 0, s: r.view.scale };
-    applyLang(); S = JSON.parse(W.state()); render();
+    applyLang(); setState(W.state()); render();
     $('#loading').hidden = true;
   } catch (e) {
     $('#loadmsg').textContent = tr('load_failed').replace('%s', e.message || e);

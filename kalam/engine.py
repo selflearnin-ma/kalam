@@ -211,14 +211,31 @@ class SliderSpec:
         self.value = sp.nsimplify(v)
 
 
+def string_line(text):
+    """Inner text of a text line ("..." or « ... »), else None."""
+    s = text.strip()
+    if s.startswith('"'):
+        s = s[1:-1] if len(s) > 1 and s.endswith('"') else s[1:]
+        return s.replace('\\"', '"')
+    if s.startswith('«'):
+        return (s[1:-1] if s.endswith('»') else s[1:]).strip()
+    return None
+
+
 class Cell:
+    """One line of the notebook. Lines with the same `block` form one cell on screen."""
     _next = 1
 
-    def __init__(self, text='', kind='math', visible=True, color=None):
+    def __init__(self, text='', kind='math', visible=True, color=None, block=None):
         self.id = Cell._next
         Cell._next += 1
         self.text, self.kind, self.visible, self.color = text, kind, visible, color
+        self.block = self.id if block is None else block
         self.reset()
+
+    @property
+    def is_text(self):
+        return self.kind == 'text' or string_line(self.text) is not None
 
     def reset(self):
         self.name = self.value = self.error = self.slider = self.note = None
@@ -296,33 +313,38 @@ class Session:
 
     def evaluate_cell(self, c):
         c.reset()
-        n = self.index(c) + 1
-        if c.kind == 'text':
+        n = self.blocks().index(c.block) + 1        # $n = cell n as numbered on screen
+        if c.is_text:
             # {{expr}} becomes LaTeX: as is inside $...$ ("$f(x)={{f(x)}}$"), wrapped in $...$ outside
+            text = c.text if c.kind == 'text' else string_line(c.text)
             out = []
-            for i, chunk in enumerate(re.split(r'\{\{(.*?)\}\}', c.text, flags=re.S)):
+            for i, chunk in enumerate(re.split(r'\{\{(.*?)\}\}', text, flags=re.S)):
                 if i % 2 == 0:
                     out.append(chunk)
                     continue
                 in_math = ''.join(out).count('$') % 2 == 1
                 try:
-                    tex = sp.latex(self.evaluate_expression(chunk))
+                    v = self.evaluate_expression(chunk)
+                    tex = sp.latex(v.expr) if isinstance(v, sp.Lambda) else value_latex(v)
                 except Exception as e:
                     tex = r'\text{[%s]}' % str(e).replace('$', '')
                 out.append(tex if in_math else '$%s$' % tex)
             c.parts = [(False, ''.join(out))]      # one text with $...$ formulas, rendered by the UI
             return
         code, _, note = c.text.partition('#')
-        c.note = note.strip() or None
-        if not code.strip():
+        c.note = note.strip() or None              # a comment: never shown, kept in the Python export
+        code = code.strip()
+        silent = code.endswith(';')                # trailing ; computes without showing the result
+        code = code.rstrip(';').strip()
+        if not code:
             return
         try:
-            self._evaluate_math(c, code.strip())
+            self._evaluate_math(c, code)
             # a definition (f(x) = ..., A = ...) shows nothing; type `f`, `f(x)` or `A` to see a result
-            if c.name is None:
+            if c.name is None and not silent:
                 c.latex = display_latex(c.value)
-                if isinstance(c.value, sp.Lambda) and code.strip().isidentifier():
-                    c.latex = function_latex(code.strip(), c.value)
+                if isinstance(c.value, sp.Lambda) and code.isidentifier():
+                    c.latex = function_latex(code, c.value)
         except Exception as e:  # any CAS failure is shown in the cell, never raised
             c.error = str(e) if isinstance(e, KalamError) else '%s: %s' % (type(e).__name__, e)
             c.value = None
@@ -366,10 +388,78 @@ class Session:
     def index(self, c):
         return self.cells.index(c)
 
-    def add_cell(self, text='', kind='math', at=None):
-        c = Cell(text, kind)
+    def add_cell(self, text='', kind='math', at=None, block=None):
+        c = Cell(text, kind, block=block)
         self.cells.insert(len(self.cells) if at is None else at, c)
         return c
+
+    def load_cells(self, items):
+        """Cells from a .klm list. Old files: no `block` (one line per cell) and kind "text" cells,
+        which become "..." lines of a single cell."""
+        self.cells[:] = []
+        self._snap = {}
+        for k, d in enumerate(items):
+            block = d.get('block', 'old%d' % k)
+            if d.get('kind') == 'text':
+                lines = ['"%s"' % ln.replace('"', '\\"') for ln in d['text'].split('\n') if ln.strip()] or ['']
+            else:
+                lines = [d['text']]
+            for ln in lines:
+                c = self.add_cell(ln, block=block)
+                c.visible, c.color = d.get('visible', True), d.get('color')
+        if not self.cells:
+            self.add_cell()
+        self.evaluate_all()
+
+    def cells_json(self):
+        return [dict(text=c.text, block=c.block, visible=c.visible, color=c.color) for c in self.cells]
+
+    # ------------------------------------------------------------ cells on screen (blocks of lines)
+    def blocks(self):
+        return list(dict.fromkeys(c.block for c in self.cells))
+
+    def block_lines(self, b):
+        return [c for c in self.cells if c.block == b]
+
+    def set_block(self, b, text):
+        """Replace the lines of cell b with `text` (one line per statement) and recompute."""
+        old = self.block_lines(b)
+        at = self.index(old[0]) if old else len(self.cells)
+        keep = {}                                  # unchanged lines keep their colour and visibility
+        for c in old:
+            keep.setdefault(c.text, (c.visible, c.color))
+            self.cells.remove(c)
+            self._snap.pop(c.id, None)
+        lines = [ln for ln in text.split('\n') if ln.strip()] or ['']
+        for k, ln in enumerate(lines):
+            c = self.add_cell(ln.rstrip(), at=at + k, block=b)
+            c.visible, c.color = keep.get(c.text, (True, None))
+        self.evaluate_from(at)
+
+    def insert_block(self, pos, text=''):
+        """New cell at screen position pos; returns its block id."""
+        bs = self.blocks()
+        at = self.index(self.block_lines(bs[pos])[0]) if pos < len(bs) else len(self.cells)
+        c = self.add_cell('', at=at)
+        self.set_block(c.block, text)
+        return c.block
+
+    def delete_block(self, b):
+        at = self.index(self.block_lines(b)[0])
+        for c in self.block_lines(b):
+            self.cells.remove(c)
+            self._snap.pop(c.id, None)
+        if not self.cells:
+            self.add_cell()
+        self.evaluate_from(min(at, len(self.cells) - 1))
+
+    def move_block(self, b, step):
+        bs = self.blocks()
+        j = bs.index(b) + step
+        if 0 <= j < len(bs):
+            bs[bs.index(b)], bs[j] = bs[j], b
+            self.cells.sort(key=lambda c: bs.index(c.block))   # stable: lines keep their order
+            self.evaluate_all()
 
     def remove_cell(self, c):
         i = self.index(c)

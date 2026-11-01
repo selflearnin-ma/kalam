@@ -92,20 +92,40 @@ def test_exports():
     assert '\\tkzDefPoint(1,2){A}' in fig and '\\tkzFct' in fig and '\\tkzDrawCircle' in fig
 
 
+def test_cells_of_several_lines():
+    s = Session()
+    b = s.insert_block(0, 'f(x) = x^2 - 2x - 3\n"Étude de $f$ : on pose $f(x)={{f(x)}}$."\n# pour moi\nSolve(f(x) = 0, x)\nf(2);')
+    lines = s.block_lines(b)
+    assert [c.latex for c in lines] == ['', '', '', r'\left\{-1, 3\right\}', '']   # definition, text, comment, result, ;
+    assert lines[1].is_text and lines[1].parts == [(False, 'Étude de $f$ : on pose $f(x)=x^{2} - 2 x - 3$.')]
+    assert lines[0].dim == 2 and s.env['f'](2) == -3
+    s.insert_block(1, '$1')                       # $n = cell n on screen (its last line)
+    assert s.block_lines(s.blocks()[1])[0].value == -3
+    s.set_block(b, 'f(x) = x^2 - 4\nSolve(f(x) = 0, x)')    # editing a cell recomputes the cells after it
+    assert s.block_lines(b)[1].value == sp.FiniteSet(-2, 2)
+    s.move_block(s.blocks()[1], -1)
+    assert s.block_lines(s.blocks()[0])[0].text == '$1'
+    # old .klm: one line per cell, text cells become "..." lines
+    s.load_cells([dict(kind='text', text='Bonjour "tous"\n\nsuite'), dict(kind='math', text='g(x) = 2x')])
+    assert [c.text for c in s.cells] == ['"Bonjour \\"tous\\""', '"suite"', 'g(x) = 2x']
+    assert s.cells[0].parts == [(False, 'Bonjour "tous"')] and len(s.blocks()) == 2
+
+
 def test_web_bridge():
     import json
     import zipfile
     import io
     from kalam import web
     web.new()
-    for t in ['f(x) = x^2', 'A = (1, 2)', 'x^2 + y^2 < 4', 'S = Sphere((0,0,0), 1)']:
-        web.insert(len(web.session.cells), 'math', t)
-    cells = json.loads(web.state())['cells']
-    assert cells[1]['scene'] == [dict(k='fx', v='x', js='Math.pow(x, 2)', lo=None, hi=None)]
-    assert cells[2]['scene'][0]['free'] and cells[3]['scene'][0]['op'] == '<'
-    assert cells[4]['scene'][0]['k'] == 'sph'
-    web.move_point(2, 3, 4)
-    assert json.loads(web.state())['cells'][2]['text'] == 'A = (3, 4)'
+    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nx^2 + y^2 < 4\nS = Sphere((0,0,0), 1)')
+    lines = json.loads(web.state())['lines']
+    assert lines[0]['scene'] == [dict(k='fx', v='x', js='Math.pow(x, 2)', lo=None, hi=None)]
+    assert lines[1]['scene'][0]['free'] and lines[2]['scene'][0]['op'] == '<'
+    assert lines[3]['scene'][0]['k'] == 'sph' and len({ln['block'] for ln in lines}) == 1
+    web.move_point(1, 3, 4)
+    assert json.loads(web.state())['lines'][1]['text'] == 'A = (3, 4)'
+    web.insert_cell(1, '"texte"')
+    assert json.loads(web.klm_text())['cells'][-1]['text'] == '"texte"'
     names = zipfile.ZipFile(io.BytesIO(web.export_zip('k'))).namelist()
     assert sorted(names) == ['k.klm', 'k.py', 'k.tex', 'k_figure.tex']
 

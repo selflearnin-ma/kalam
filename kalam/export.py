@@ -12,14 +12,13 @@ from sympy.printing.str import StrPrinter
 from . import runtime
 from .engine import GLOBALS_BASE, Session, fmt
 
-FORMAT_VERSION = 1
 
 
 # ---------------------------------------------------------------- .klm
 def save_klm(session, path, view=None, lang='fr'):
     data = {
-        'format': 'kalam', 'version': FORMAT_VERSION, 'lang': lang, 'view2d': view or {},
-        'cells': [dict(kind=c.kind, text=c.text, visible=c.visible, color=c.color) for c in session.cells],
+        'format': 'kalam', 'version': 2, 'lang': lang, 'view2d': view or {},
+        'cells': session.cells_json(),
         'commands': [c.to_json() for c in session.registry.user_commands()],
     }
     with open(path, 'w', encoding='utf-8') as f:
@@ -35,10 +34,7 @@ def load_klm(path, registry):
         if d['name'] not in registry.commands:
             registry.add_user(d)
     s = Session(registry)
-    for d in data['cells']:
-        c = s.add_cell(d['text'], d.get('kind', 'math'))
-        c.visible, c.color = d.get('visible', True), d.get('color')
-    s.evaluate_all()
+    s.load_cells(data['cells'])
     return s, data.get('view2d') or {}, data.get('lang')
 
 
@@ -68,8 +64,10 @@ def to_python(session):
     lines += ['', '# ---------------------------------------------------------------- notebook']
     known = set(GLOBALS_BASE) | set(reg.commands) | set(vars(runtime)) | {'e_', 'i_'}
     declared = {'x', 'y', 'z', 't'}
-    for n, c in enumerate(session.cells, 1):
-        if c.kind == 'text':
+    cell_number = {b: k for k, b in enumerate(session.blocks(), 1)}    # $n = cell n on screen
+    for c in session.cells:
+        n = cell_number[c.block]
+        if c.is_text:
             lines += ['', '# ' + c.text.replace('\n', '\n# ')]
             continue
         if c.norm is None:
@@ -144,21 +142,16 @@ def _tex_text(s):
 
 
 def to_latex(session, lang='fr'):
+    """The notebook as shown on screen: text lines are paragraphs, results are formulas; code is not printed."""
     body = []
-    for n, c in enumerate(session.cells, 1):
-        if c.kind == 'text':
+    for c in session.cells:
+        if c.is_text:
             txt = ''.join('$%s$' % s if is_math else s for is_math, s in c.parts)
-            body.append(_tex_text(txt).replace('\n\n', '\n\n\\medskip\n') + '\n')
-            continue
-        if not c.text.strip():
-            continue
-        code = c.text.partition('#')[0].strip()
-        body.append('\\noindent\\textcolor{gray}{\\small\\texttt{(%d)\\ %s}}' % (n, _escape(code)))
-        if c.error:
+            body.append(_tex_text(txt) + '\n')
+        elif c.error:
             body.append('\\[\\text{\\textcolor{red}{%s}}\\]' % _tex_text(c.error))
         elif c.latex:
-            note = ('\\quad\\text{%s}' % _tex_text(c.note)) if c.note else ''
-            body.append('\\[%s%s\\]' % (c.latex, note))
+            body.append('\\[%s\\]' % c.latex)
     return ('\\documentclass[11pt]{article}\n\\usepackage{amsmath,amssymb,xcolor}\n'
             '\\usepackage[margin=2cm]{geometry}\n' + _PREAMBLE.get(lang, '') +
             '\\begin{document}\n\n' + '\n'.join(body) + '\n\\end{document}\n')

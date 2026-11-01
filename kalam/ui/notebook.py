@@ -106,7 +106,7 @@ class CellWidget(QFrame):
 
     def view_html(self):
         c = self.cell
-        if c.kind == 'text':
+        if c.is_text:
             if not c.text.strip():
                 return '<span style="color:#9aa0aa">%s</span>' % html.escape(tr('text_placeholder', self.nb.lang))
             return '<div style="font-size:14px">%s</div>' % mathrender.html_text_with_math(c.parts, 13)

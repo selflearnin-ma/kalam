@@ -121,10 +121,12 @@ def _scene(v, free):
 
 
 # ---------------------------------------------------------------- state
-def _cell_json(c):
-    d = dict(kind=c.kind, text=c.text, visible=c.visible, color=c.color, name=c.name,
-             latex=c.latex, error=c.error, note=c.note, parts=c.parts)
-    if c.kind == 'math' and c.value is not None and not c.error:
+# The page shows one cell per block (group of lines); the engine works line by line.
+# Cell operations take the cell's position on screen; style, points and sliders take a line index.
+def _line_json(c):
+    d = dict(text=c.text, block=c.block, visible=c.visible, color=c.color, name=c.name,
+             latex=c.latex, error=c.error, text_line=c.is_text, parts=c.parts)
+    if c.value is not None and not c.error:
         d['dim'] = c.dim
         d['free'] = c.is_free_point
         d['scene'] = scene(c.value, c.is_free_point) if d['dim'] else []
@@ -135,73 +137,58 @@ def _cell_json(c):
 
 
 def state():
-    return json.dumps(dict(cells=[_cell_json(c) for c in session.cells]))
+    return json.dumps(dict(lines=[_line_json(c) for c in session.cells]))
 
 
-def _cell(i):
-    return session.cells[int(i)]
+def _block(pos):
+    return session.blocks()[int(pos)]
 
 
-def set_text(i, text):
-    session.set_text(_cell(i), text)
+def set_cell(pos, text):
+    session.set_block(_block(pos), text)
     return state()
 
 
-def insert(i, kind='math', text=''):
-    session.add_cell(text, kind, at=int(i))
-    session.evaluate_from(int(i))
+def insert_cell(pos, text=''):
+    session.insert_block(int(pos), text)
     return state()
 
 
-def delete(i):
-    session.remove_cell(_cell(i))
-    if not session.cells:
-        session.add_cell()
+def delete_cell(pos):
+    session.delete_block(_block(pos))
     return state()
 
 
-def move(i, j):
-    cells = session.cells
-    i, j = int(i), int(j)
-    cells[i], cells[j] = cells[j], cells[i]
-    session.evaluate_from(min(i, j))
-    return state()
-
-
-def set_kind(i, kind):
-    c = _cell(i)
-    c.kind = kind
-    session.evaluate_from(int(i))
+def move_cell(pos, step):
+    session.move_block(_block(pos), int(step))
     return state()
 
 
 def set_style(i, visible, color):
-    c = _cell(i)
+    c = session.cells[int(i)]
     c.visible, c.color = bool(visible), color or None
     return state()
 
 
 def move_point(i, x, y):
-    session.move_point(_cell(i), x, y)
+    session.move_point(session.cells[int(i)], x, y)
     return state()
 
 
 def move_slider(i, value):
-    session.move_slider(_cell(i), value)
+    session.move_slider(session.cells[int(i)], value)
     return state()
 
 
 def new():
-    session.cells[:] = []
-    session.env = {}
-    session.add_cell()
+    session.load_cells([])
     return state()
 
 
 # ---------------------------------------------------------------- files
 def klm_text(lang='fr', view=None):
-    data = {'format': 'kalam', 'version': 1, 'lang': lang, 'view2d': json.loads(view) if view else {},
-            'cells': [dict(kind=c.kind, text=c.text, visible=c.visible, color=c.color) for c in session.cells],
+    data = {'format': 'kalam', 'version': 2, 'lang': lang, 'view2d': json.loads(view) if view else {},
+            'cells': session.cells_json(),
             'commands': [c.to_json() for c in session.registry.user_commands()]}
     return json.dumps(data, ensure_ascii=False, indent=1)
 
@@ -213,13 +200,7 @@ def load_klm_text(text):
     for d in data.get('commands', []):
         if d['name'] not in session.registry.commands or session.registry.commands[d['name']].code is not None:
             session.registry.add_user(d)
-    session.cells[:] = []
-    for d in data['cells']:
-        c = session.add_cell(d['text'], d.get('kind', 'math'))
-        c.visible, c.color = d.get('visible', True), d.get('color')
-    if not session.cells:
-        session.add_cell()
-    session.evaluate_all()
+    session.load_cells(data['cells'])
     return json.dumps(dict(view=data.get('view2d') or {}, lang=data.get('lang')))
 
 

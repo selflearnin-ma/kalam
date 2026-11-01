@@ -63,13 +63,24 @@ python tests/test_core.py            # core self-checks
 
 ## 2. Using the notebook
 
-- **Enter** evaluates a cell and moves to the next one; **↑/↓** move between cells; **Esc** cancels.
-- **Click a result** to edit it again. Right-click a cell: insert, move, delete, convert to text, colour.
-- The **coloured dot** shows/hides the object in the graphics view.
-- **Text cells** (`+ Text`, Ctrl+Enter to render): `$…$` is a formula and `{{expr}}` a *live value*
-  computed by the CAS, e.g. `La dérivée est {{f'(x)}}`.
-- **Drag free points** (`A = (1, 2)`) in the 2D view; their cell text is rewritten.
-- 2D view: drag to pan, wheel to zoom, buttons + − ⌂. 3D view: drag to rotate, wheel to zoom.
+There is one kind of cell: **code**. A cell can hold several lines, and its output is shown
+**in place of the cell**; click it to edit the code again.
+
+| Line | Example | Shown |
+|---|---|---|
+| definition | `f(x) = x^2 - 2x - 3`, `A = (1, 2)` | nothing (defined, and drawn if drawable) |
+| expression | `Résoudre(f(x) = 0, x)`, `f`, `f(x)`, `A` | its result |
+| text | `"Soit $f$ définie par $f(x) = {{f(x)}}$."` or `« … »` | the sentence; `$…$` is a formula, `{{expr}}` a computed value |
+| hidden result | `Résoudre(f(x) = 0, x);` | nothing (trailing `;`) |
+| comment | `# pour moi` | nothing |
+
+- **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and
+  goes to the next cell; the **✓** button evaluates (phones). Cells after an edited one recompute.
+- The **coloured dots** show/hide each drawn object of the cell; the **⋯** menu inserts, moves,
+  deletes a cell and sets colours.
+- **Drag free points** (`A = (1, 2)`) in the 2D view; their line is rewritten.
+- 2D view: drag to pan, wheel or pinch to zoom, buttons + − ⌂. 3D view: drag to rotate, wheel to zoom.
+- Notebooks from earlier versions open unchanged: their text cells become `"…"` lines.
 
 ### Input language
 
@@ -84,8 +95,7 @@ python tests/test_core.py            # core self-checks
 | `f'(x)`, `f''(2)` | derivatives |
 | `2x`, `3(x+1)`, `a x^2` | implicit multiplication |
 | `π`, `√2`, `x²`, `∞`, `≤`, `e`, `i`, `ln` | usual notations (`e` = exp(1), `i` = imaginary unit) |
-| `$3` | result of cell 3 |
-| `Solve(f(x)=0, x)  # roots` | text after `#` is a note shown beside the result |
+| `$3` | result of cell 3 (its last line) |
 | Arabic-Indic digits `٣`, Arabic comma `،` | accepted |
 
 Results are **exact** (decimals are read as fractions: `0.25` → `1/4`); use `Numeric(e)` / `Valeur(e)`
