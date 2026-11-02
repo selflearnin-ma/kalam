@@ -84,6 +84,9 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   is rewritten. Figures are exported to LaTeX (tkz) in place.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and
   goes to the next cell; the **✓** button evaluates (phones). Cells after an edited one recompute.
+- **Fichier** menu: New (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Save as (Ctrl+Shift+S), Export (Ctrl+E), commands
+  editor. In the apps Save writes back to the opened file; in a browser it downloads the `.klm`.
+- **Clavier** tab: x, y, □², □^□, □/□, √□, ⁿ√□, |□|, π, e, ∞, ≤, sin, ln… inserted at the cursor, cursor left inside the box.
 - Notebooks from earlier versions open unchanged: their text cells become `"…"` lines.
 
 ### Input language

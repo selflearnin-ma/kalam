@@ -26,14 +26,24 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #app { height: 100%; display: flex; flex-direction: column; }
 
-header { display: flex; align-items: center; gap: 6px; padding-block: 8px;
+header { display: flex; align-items: center; gap: 4px; padding-block: 7px; position: relative; z-index: 2;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   background: var(--panel); border-bottom: 1px solid var(--line); }
-.brand { display: flex; align-items: baseline; gap: 8px; margin-inline-end: 10px; }
+.brand { display: flex; align-items: center; gap: 8px; margin-inline-end: 10px; }
+.brand::before { content: ""; width: 24px; height: 24px; border-radius: 7px; align-self: center;
+  background: linear-gradient(135deg, var(--accent), #8a5cf6); }
 .brand b { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .brand span { font-family: "IBM Plex Sans Arabic", var(--font); color: var(--accent); font-size: 17px; }
-.tb { border: 1px solid transparent; background: none; border-radius: 8px; padding: 6px 10px; color: var(--ink); white-space: nowrap; }
-.tb:hover { background: var(--accent-soft); }
+.tb { border: 1px solid transparent; background: none; border-radius: 9px; padding: 6px 10px; color: var(--ink); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 7px; transition: background .12s; }
+.tb:hover, .tb[aria-expanded="true"] { background: var(--accent-soft); }
+.tb.ic { padding: 6px 7px; }
+.tb svg, .menu svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.sep { width: 1px; height: 22px; background: var(--line); margin-inline: 4px; }
+#doc { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; min-width: 0; }
+#docName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 30vw; }
+#docDirty { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 .spacer { flex: 1; }
 #lang { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 8px; }
 
@@ -46,16 +56,21 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 #ptabs { display: flex; overflow-x: auto; scrollbar-width: none; padding-inline: 8px; }
 #ptabs button { border: none; background: none; padding: 8px 10px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
 #ptabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
-#pbtns { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; max-height: 88px; overflow-y: auto; }
-#pbtns button { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 4px 9px; }
+#pbtns { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px 10px; max-height: 104px; overflow-y: auto; }
+#pbtns button { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 5px 11px; transition: border-color .12s, background .12s; }
 #pbtns button:hover { border-color: var(--accent); background: var(--accent-soft); }
-#pbtns button.sym { font-family: var(--mono); min-width: 34px; }
+#pbtns button:active { transform: translateY(1px); }
+#pbtns button.key { min-width: 44px; height: 38px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; direction: ltr; }
+#pbtns button.key.op { color: var(--accent); }
+#pbtns .kgap { width: 10px; }
+#pbtns.kb { direction: ltr; }   /* math keys keep their order in Arabic */
 
 /* notebook */
 #nb { flex: 1; overflow-y: auto; padding-block: 10px 80px; padding-inline: 10px; display: flex; flex-direction: column; gap: 7px; }
 .cell { display: grid; grid-template-columns: 26px minmax(0, 1fr) 28px; gap: 6px; background: var(--panel);
-  border: 1px solid var(--line); border-radius: var(--r); padding: 6px 4px 6px 6px; }
-.cell.editing { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  border: 1px solid var(--line); border-radius: 12px; padding: 8px 4px 8px 6px; box-shadow: 0 1px 2px rgb(16 24 40 / 0.04); transition: border-color .12s, box-shadow .12s; }
+.cell:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.cell.editing { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .gut { display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 2px; }
 .num { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
 .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; background: none; padding: 0; }
@@ -78,7 +93,8 @@ textarea.ed { resize: vertical; min-height: 48px; line-height: 1.5; }
 .more:hover { background: var(--accent-soft); color: var(--ink); }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 .adds { display: flex; gap: 8px; }
-.adds button { border: 1px dashed var(--line); background: none; border-radius: 8px; padding: 6px 12px; color: var(--accent); }
+.adds button { border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); background: none; border-radius: 10px; padding: 8px 14px; color: var(--accent); width: 100%; }
+.adds button:hover { background: var(--accent-soft); border-style: solid; }
 
 /* figures (output of Tracer, Courbe, Graphe3D) */
 .fig { position: relative; height: 340px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
@@ -91,7 +107,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* phone */
 @media (max-width: 820px) {
   .tb .lt { display: none; }
-  .brand span { display: none; }
+  .brand span, .brand b, #doc, .sep, #bNew, #bOpen { display: none; }
   .fig { height: 280px; }
 }
 
@@ -104,7 +120,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { #loading .bar i { animation: none; width: 100%; } }
 .menu { position: fixed; z-index: 40; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.14); display: flex; flex-direction: column; min-width: 190px; }
-.menu button, .menu label { border: none; background: none; text-align: start; padding: 7px 10px; border-radius: 7px; display: flex; gap: 8px; align-items: center; }
+.menu button, .menu label { border: none; background: none; text-align: start; padding: 7px 10px; border-radius: 7px; display: flex; gap: 10px; align-items: center; }
+.menu button span { flex: 1; }
+.menu kbd { font-family: var(--font); font-size: 11.5px; color: var(--faint); direction: ltr; }
+.menu hr { border: none; border-top: 1px solid var(--line); margin: 4px 6px; }
 .menu button:hover, .menu label:hover { background: var(--accent-soft); }
 .menu input[type=color] { width: 22px; height: 22px; border: none; padding: 0; background: none; }
 dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); padding: 0; width: min(920px, calc(100vw - 24px)); max-height: calc(100% - 24px); }
@@ -134,10 +153,16 @@ dialog::backdrop { background: rgb(10 14 22 / 0.45); }
 <div id="app">
   <header>
     <div class="brand"><b>Kalam</b><span>قلم</span></div>
-    <button class="tb" id="bNew"><span aria-hidden="true">＋</span> <span class="lt" data-t="new"></span></button>
-    <label class="tb" id="bOpen"><span aria-hidden="true">⇪</span> <span class="lt" data-t="open"></span><input type="file" id="fOpen" hidden></label>
-    <button class="tb" id="bExport"><span aria-hidden="true">⇩</span> <span class="lt" data-t="export"></span></button>
-    <button class="tb" id="bCmd"><span aria-hidden="true">ƒ</span> <span class="lt" data-t="commands"></span></button>
+    <button class="tb" id="bFile" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="lt" data-t="file"></span></button>
+    <div class="sep"></div>
+    <button class="tb ic" id="bNew" data-tt="new"><svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M12 11v6M9 14h6"/></svg></button>
+    <button class="tb ic" id="bOpen" data-tt="open"><svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg></button>
+    <button class="tb ic" id="bSave" data-tt="save"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg></button>
+    <button class="tb" id="bExport"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="lt" data-t="export"></span></button>
+    <button class="tb" id="bCmd"><svg viewBox="0 0 24 24"><path d="M15 4h-2a3 3 0 0 0-3 3v11a3 3 0 0 1-3 3H6M7 11h8"/></svg><span class="lt" data-t="commands"></span></button>
+    <input type="file" id="fOpen" accept=".klm,application/json" hidden>
+    <div class="spacer"></div>
+    <div id="doc"><span id="docName"></span><i id="docDirty" hidden></i></div>
     <div class="spacer"></div>
     <select id="lang" aria-label="Language"><option value="fr">Français</option><option value="ar">العربية</option><option value="en">English</option></select>
   </header>
@@ -190,7 +215,16 @@ window.MathJax = { tex: { packages: { '[+]': ['ams'] } }, svg: { fontCache: 'loc
 "use strict";
 const PY = 'py/';
 const COLORS = ['#2f6fed', '#e8590c', '#2b8a3e', '#c2255c', '#7048e8', '#0c8599', '#e67700', '#5c677d'];
-const SYMBOLS = ['π', 'e', 'i', '√(', '^', '²', '∞', '≤', '≥', '≠', '×', '÷', '(', ')', '[', ']', 'x', 'y', 'z', 't', 'θ', '$', '#'];
+// math keyboard: [label (TeX), text inserted, caret moves back by, extra class]; null = small gap
+const KEYS = [
+  ['x', 'x'], ['y', 'y'], ['z', 'z'], ['t', 't'], ['\\theta', 'θ'], null,
+  ['\\square^{2}', '^2', 0, 'op'], ['\\square^{\\square}', '^()', 1, 'op'], ['\\frac{\\square}{\\square}', '()/()', 4, 'op'],
+  ['\\sqrt{\\square}', 'sqrt()', 1, 'op'], ['\\sqrt[\\square]{\\square}', 'root(, )', 3, 'op'], ['\\left|\\square\\right|', 'abs()', 1, 'op'],
+  ['(\\square)', '()', 1, 'op'], ['e^{\\square}', 'e^()', 1, 'op'], null,
+  ['\\pi', 'π'], ['e', 'e'], ['i', 'i'], ['\\infty', '∞'], null,
+  ['+', ' + '], ['-', ' - '], ['\\times', '*'], ['\\div', '/'], ['=', ' = '], ['\\le', ' ≤ '], ['\\ge', ' ≥ '], ['\\neq', ' ≠ '], null,
+  ['\\sin', 'sin()', 1], ['\\cos', 'cos()', 1], ['\\tan', 'tan()', 1], ['\\ln', 'ln()', 1], ['\\log', 'log()', 1], ['n!', '!'], null,
+  ['f(x)=', 'f(x) = '], ['\\text{"…"}', '""', 1], ['\\{\\{\\square\\}\\}', '{{}}', 2], ['\\#', '# ']];
 const DEMO = { fr: __DEMO_FR__, ar: __DEMO_AR__ };
 const $ = s => document.querySelector(s);
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -209,7 +243,7 @@ function call(fn, ...args) {
   catch (e) { toast(pyErr(e)); throw e; }
 }
 function pyErr(e) { const m = String(e.message || e).trim().split('\n'); return m[m.length - 1]; }
-function apply(json) { setState(json); renderNotebook(); scheduleSave(); }
+function apply(json) { setState(json); renderNotebook(); scheduleSave(); touched(); }
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2600); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 const mjCache = new Map();
@@ -239,6 +273,8 @@ function applyLang() {
   $('#lang').value = lang;
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = tr(el.dataset.t));
   $('#ceArgs').placeholder = tr('ce_test_args');
+  document.querySelectorAll('[data-tt]').forEach(el => { el.title = tr(el.dataset.tt); el.setAttribute('aria-label', el.title); });
+  if (W) showDoc();
   store.set('kalam.lang', lang);
   if (CAT) { renderPalette(); renderNotebook(); }
 }
@@ -251,10 +287,12 @@ function renderPalette() {
   if (CAT.commands.some(c => c.user && c.palette)) tabs.push('user');
   $('#ptabs').innerHTML = tabs.map(t => `<button role="tab" data-tab="${t}" aria-selected="${t === ptab}">${esc(tr(t))}</button>`).join('');
   let btns;
-  if (ptab === 'symbols') btns = SYMBOLS.map(s => `<button class="sym" data-ins="${esc(s)}">${esc(s)}</button>`);
+  if (ptab === 'symbols') btns = KEYS.map(k => k ? `<button class="key ${k[3] || ''}" data-ins="${esc(k[1])}" data-back="${k[2] || 0}" title="${esc(k[1].trim())}"></button>` : '<span class="kgap"></span>');
   else btns = CAT.commands.filter(c => c.palette && (ptab === 'user' ? c.user : !c.user && c.category === ptab))
     .map(c => `<button data-ins="${esc(cmdLabel(c))}()" data-back="1" title="${esc(cmdLabel(c) + '(' + c.hint + ')')}">${esc(cmdLabel(c))}</button>`);
   $('#pbtns').innerHTML = btns.join('');
+  $('#pbtns').classList.toggle('kb', ptab === 'symbols');
+  if (ptab === 'symbols') $('#pbtns').querySelectorAll('.key').forEach((b, n) => b.appendChild(tex(KEYS.filter(Boolean)[n][0])));
 }
 $('#ptabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { ptab = b.dataset.tab; renderPalette(); } };
 $('#pbtns').onmousedown = e => e.preventDefault();   // keep the editor focused
@@ -263,7 +301,8 @@ $('#pbtns').onclick = e => {
   if (editing < 0) startEdit(S.blocks.length - 1);
   const ed = document.querySelector('.cell.editing .ed'); if (!ed) return;
   ed.setRangeText(b.dataset.ins, ed.selectionStart, ed.selectionEnd, 'end');
-  if (b.dataset.back) ed.selectionStart = ed.selectionEnd = ed.selectionEnd - 1;
+  ed.selectionStart = ed.selectionEnd = ed.selectionEnd - (+b.dataset.back || 0);
+  ed.dispatchEvent(new Event('input'));
   ed.focus();
 };
 
@@ -365,29 +404,48 @@ $('#nb').onclick = e => {
     startEdit(k);
   }
 };
-function cellMenu(k, anchor) {
+// items: [string key, action, shortcut?, svg path?] or '-' for a separator
+function popMenu(anchor, items, alignStart) {
   closeMenu();
-  const m = document.createElement('div'); m.className = 'menu';
-  const item = (key, fn) => { const b = document.createElement('button'); b.textContent = tr(key); b.onclick = () => { closeMenu(); fn(); }; m.appendChild(b); };
+  const m = document.createElement('div'); m.className = 'menu'; m.setAttribute('role', 'menu');
+  for (const it of items) {
+    if (it === '-') { m.appendChild(document.createElement('hr')); continue; }
+    const b = document.createElement('button'); b.setAttribute('role', 'menuitem');
+    b.innerHTML = (it[3] ? `<svg viewBox="0 0 24 24"><path d="${it[3]}"/></svg>` : '') + `<span>${esc(tr(it[0]))}</span>` + (it[2] ? `<kbd>${it[2]}</kbd>` : '');
+    b.onclick = () => { closeMenu(); it[1](); }; m.appendChild(b);
+  }
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect(), rtl = document.documentElement.dir === 'rtl';
+  m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
+  const x = alignStart !== rtl ? r.left : r.right - m.offsetWidth;
+  m.style.left = Math.max(8, Math.min(x, innerWidth - m.offsetWidth - 8)) + 'px';
+  anchor.setAttribute('aria-expanded', 'true'); m.anchor = anchor;
+  m.querySelector('button').focus({ preventScroll: true });
+  setTimeout(() => document.addEventListener('pointerdown', outside), 0);
+}
+function cellMenu(k, anchor) {
+  const items = [];
+  const item = (key, fn) => items.push([key, fn]);
   item('insert_above', () => { editing = -1; apply(call('insert_cell', k, '')); startEdit(k); });
   item('insert_below', () => { editing = -1; apply(call('insert_cell', k + 1, '')); startEdit(k + 1); });
   if (k > 0) item('move_up', () => { editing = -1; apply(call('move_cell', k, -1)); });
   if (k < S.blocks.length - 1) item('move_down', () => { editing = -1; apply(call('move_cell', k, 1)); });
+  items.push('-');
   item('delete', () => { editing = -1; apply(call('delete_cell', k)); });
-  document.body.appendChild(m);
-  const r = anchor.getBoundingClientRect();
-  m.style.top = Math.min(r.bottom + 4, innerHeight - m.offsetHeight - 8) + 'px';
-  m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8)) + 'px';
-  setTimeout(() => document.addEventListener('pointerdown', outside), 0);
+  popMenu(anchor, items, false);
 }
-function outside(e) { if (!e.target.closest('.menu')) closeMenu(); }
-function closeMenu() { document.querySelectorAll('.menu').forEach(m => m.remove()); document.removeEventListener('pointerdown', outside); }
+function outside(e) { if (!e.target.closest('.menu') && !e.target.closest('[aria-expanded="true"]')) closeMenu(); }
+function closeMenu() {
+  document.querySelectorAll('.menu').forEach(m => { if (m.anchor) m.anchor.removeAttribute('aria-expanded'); m.remove(); });
+  document.removeEventListener('pointerdown', outside);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.menu')) { closeMenu(); e.stopPropagation(); } }, true);
 
 // one Python call in flight per animation frame while dragging/sliding
 let pending = null;
 function throttled(fn) { const first = !pending; pending = fn; if (first) requestAnimationFrame(() => { const f = pending; pending = null; f(); }); }
 // while a point or a slider moves: redraw the figures only; the notebook is rebuilt when it is released
-function liveUpdate(json) { setState(json); figs.forEach(f => f.update()); scheduleSave(); }
+function liveUpdate(json) { setState(json); figs.forEach(f => f.update()); scheduleSave(); touched(); }
 function slide(i, v) { throttled(() => liveUpdate(call('move_slider', i, v))); }
 
 // ------------------------------------------------------------------ figures (output of Tracer, Courbe, Graphe3D)
@@ -653,17 +711,74 @@ function confirmBox(msg, yes) {
   $('#cfYes').onclick = () => { d.close(); yes(); }; d.showModal();
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-close]')) e.target.closest('dialog').close(); });
-$('#bNew').onclick = () => confirmBox(tr('confirm_new'), () => { editing = 0; apply(call('new')); });
-$('#fOpen').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { W.load_klm_text(await f.text()); figViews.clear();
-    editing = -1; CAT = JSON.parse(W.catalog()); renderPalette(); apply(W.state()); toast(tr('opened').replace('%s', f.name)); }
+// the document: its name, its path in the desktop app (null: never saved), modified since the last save
+const doc = { name: null, path: null, dirty: false };
+function showDoc() {
+  $('#docName').textContent = (doc.name || tr('untitled')).replace(/\.klm$/, '') + '.klm';
+  $('#docDirty').hidden = !doc.dirty; $('#docDirty').title = tr('modified');
+  document.title = (doc.dirty ? '• ' : '') + (doc.name || tr('untitled')) + ' — Kalam';
+  store.set('kalam.doc', JSON.stringify({ name: doc.name, path: doc.path }));
+}
+function touched() { if (!doc.dirty) { doc.dirty = true; showDoc(); } }
+function newDoc() { editing = 0; Object.assign(doc, { name: null, path: null, dirty: false }); figViews.clear(); apply(call('new')); doc.dirty = false; showDoc(); }
+function openText(text, name, path) {
+  try { W.load_klm_text(text); figViews.clear();
+    editing = -1; CAT = JSON.parse(W.catalog()); renderPalette(); apply(W.state());
+    Object.assign(doc, { name, path, dirty: false }); showDoc(); toast(tr('opened').replace('%s', name)); }
   catch (err) { toast(tr('error') + ': ' + pyErr(err)); }
-  e.target.value = '';
+}
+async function openDoc() {
+  const T = window.__TAURI__;
+  if (T) {   // desktop/mobile app: native dialog, so Save can write back to the same file
+    try { const path = await T.dialog.open({ multiple: false, filters: [{ name: 'Kalam', extensions: ['klm'] }] });
+      if (path) openText(await T.fs.readTextFile(path), path.split(/[\\/]/).pop(), path); }
+    catch (e) { toast(tr('error') + ': ' + (e.message || e)); }
+    return;
+  }
+  $('#fOpen').click();
+}
+$('#fOpen').onchange = async e => { const f = e.target.files[0]; if (f) openText(await f.text(), f.name, null); e.target.value = ''; };
+async function saveDoc(as) {
+  const text = W.klm_text(lang), T = window.__TAURI__;
+  const name = (doc.name || tr('untitled')).replace(/\.klm$/, '') + '.klm';
+  if (T) {
+    try {
+      let path = !as && doc.path;
+      if (!path) path = await T.dialog.save({ defaultPath: doc.path || name, filters: [{ name: 'Kalam', extensions: ['klm'] }] });
+      if (!path) return;
+      await T.fs.writeTextFile(path, text);
+      Object.assign(doc, { path, name: path.split(/[\\/]/).pop(), dirty: false }); showDoc(); toast(tr('saved').replace('%s', doc.name));
+    } catch (e) { toast(tr('error') + ': ' + (e.message || e)); }
+    return;
+  }
+  // browser: always a download (a page cannot write back to a file)
+  if (await saveFile(name, new TextEncoder().encode(text), 'application/json')) { doc.name = name; doc.dirty = false; showDoc(); }
+}
+const ICON = { new: 'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M12 11v6M9 14h6',
+  open: 'M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
+  save: 'M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 3v5h7V3M8 21v-7h8v7',
+  saveas: 'M5 3h11l3 3v6M8 3v5h7V3M8 21H7a2 2 0 0 1-2-2V3M14 21l7-7-2-2-7 7v2z',
+  export: 'M12 3v12M7 10l5 5 5-5M5 21h14', cmd: 'M15 4h-2a3 3 0 0 0-3 3v11a3 3 0 0 1-3 3H6M7 11h8' };
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
+const askNew = () => doc.dirty ? confirmBox(tr('confirm_new'), newDoc) : newDoc();
+$('#bFile').onclick = e => {
+  if (e.currentTarget.getAttribute('aria-expanded')) return closeMenu();
+  popMenu(e.currentTarget, [['new', askNew, MOD + 'N', ICON.new], ['open', openDoc, MOD + 'O', ICON.open], '-',
+    ['save', () => saveDoc(false), MOD + 'S', ICON.save], ['save_as', () => saveDoc(true), MOD + '⇧S', ICON.saveas], '-',
+    ['export_dots', openExport, MOD + 'E', ICON.export], ['cmd_editor', openCmd, '', ICON.cmd]], true);
 };
+$('#bNew').onclick = askNew;
+$('#bOpen').onclick = openDoc;
+$('#bSave').onclick = () => saveDoc(false);
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || document.querySelector('dialog[open]')) return;
+  const k = e.key.toLowerCase(), act = { n: askNew, o: openDoc, s: () => saveDoc(e.shiftKey), e: openExport }[k];
+  if (act) { e.preventDefault(); act(); }
+});
 let exKind = 'py';
 function fillExport() { $('#exText').value = W.export_text(exKind, lang); }
-$('#bExport').onclick = () => { fillExport(); $('#dExport').showModal(); };
+function openExport() { fillExport(); $('#dExport').showModal(); }
+$('#bExport').onclick = openExport;
 $('#exKinds').onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; exKind = b.dataset.k;
   document.querySelectorAll('#exKinds button').forEach(x => x.setAttribute('aria-pressed', x === b)); fillExport(); };
 $('#exCopy').onclick = () => {
@@ -671,17 +786,20 @@ $('#exCopy').onclick = () => {
   navigator.clipboard.writeText(t.value).then(() => toast(tr('copied')), () => { t.focus(); t.select(); });
 };
 let downloads;
-async function saveFile(name, bytes) {
+// resolves true when the file was written (or handed to the browser)
+async function saveFile(name, bytes, type = 'application/zip') {
   const T = window.__TAURI__;          // Tauri app: native save dialog (paths chosen there are writable)
+  const ext = name.split('.').pop();
   if (T) {
-    try { const path = await T.dialog.save({ defaultPath: name, filters: [{ name: 'Zip', extensions: ['zip'] }] });
-      if (path) { await T.fs.writeFile(path, bytes); toast(tr('saved').replace('%s', path)); } }
+    try { const path = await T.dialog.save({ defaultPath: name, filters: [{ name: ext, extensions: [ext] }] });
+      if (path) { await T.fs.writeFile(path, bytes); toast(tr('saved').replace('%s', path)); return true; } }
     catch (e) { toast(tr('error') + ': ' + (e.message || e)); }
-    return;
+    return false;
   }
-  if (downloads) return downloads.save({ filename: name, data: new Blob([bytes], { type: 'application/zip' }) }).catch(e => { if (e && e.code !== 'declined') toast(e.message || e.code); });
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([bytes])), download: name });
+  if (downloads) return downloads.save({ filename: name, data: new Blob([bytes], { type }) }).then(() => true, e => { if (e && e.code !== 'declined') toast(e.message || e.code); return false; });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([bytes], { type })), download: name });
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return true;
 }
 $('#exZip').onclick = () => { const b = W.export_zip('kalam', lang).toJs(); saveFile('kalam.zip', b); };
 
@@ -699,10 +817,11 @@ function ceShow(name) {
   $('#ceInfo').textContent = ro ? tr('ce_builtin') : 'sp = sympy · x y z t · _body(f) · _pt(p) · Point, Line, Circle…';
   $('#ceDel').hidden = ro; $('#ceOut').textContent = '';
 }
-$('#bCmd').onclick = () => {
+$('#bCmd').onclick = () => openCmd();
+function openCmd() {
   $('#ceCat').innerHTML = CAT.categories.map(c => `<option value="${c}">${esc(tr(c))}</option>`).join('');
   ceShow(ceSel || CAT.commands.find(c => c.user)?.name || 'Point'); $('#dCmd').showModal();
-};
+}
 $('#ceList').onclick = e => { const b = e.target.closest('[data-n]'); if (b) ceShow(b.dataset.n); };
 $('#ceNew').onclick = () => {
   ceSel = null; ceList();
@@ -742,7 +861,8 @@ async function boot() {
     CAT = JSON.parse(W.catalog());
     const saved = store.get('kalam.nb');
     W.load_klm_text(saved || JSON.stringify(DEMO[lang] || DEMO.fr));
-    applyLang(); setState(W.state()); renderNotebook();
+    try { Object.assign(doc, JSON.parse(store.get('kalam.doc') || '{}')); } catch (e) {}
+    applyLang(); setState(W.state()); renderNotebook(); showDoc();
     $('#loading').hidden = true;
   } catch (e) {
     $('#loadmsg').textContent = tr('load_failed').replace('%s', e.message || e);

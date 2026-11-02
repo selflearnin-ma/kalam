@@ -28,7 +28,7 @@ X, Y, Z = runtime.x, runtime.y, runtime.z
 EQUATION_VARS = {'x', 'y', 'z'}
 
 _MATH = ['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'asin', 'acos', 'atan', 'sinh', 'cosh',
-         'tanh', 'exp', 'log', 'sqrt', 'Abs', 'floor', 'ceiling', 'factorial', 'binomial',
+         'tanh', 'exp', 'log', 'sqrt', 'root', 'Abs', 'floor', 'ceiling', 'factorial', 'binomial',
          're', 'im', 'arg', 'conjugate', 'Max', 'Min', 'sign', 'pi', 'oo', 'Eq', 'Ne', 'Lt',
          'Le', 'Gt', 'Ge', 'Lambda', 'Integer', 'Float', 'Rational', 'Symbol', 'Function']
 GLOBALS_BASE = {n: getattr(sp, n) for n in _MATH}
