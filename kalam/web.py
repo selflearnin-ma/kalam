@@ -131,7 +131,7 @@ def _figure_json(c, i):
         free = line is not None and session.cells[line].is_free_point
         items.append(dict(scene=scene(v, free), name=name, line=line if free else None))
     dim = dimension(c.value.items[0])
-    return dict(dim=dim, items=items, window=figure_window(c.value.items) if dim == 2 else None)
+    return dict(dim=dim, items=items, window=figure_window(c.value.items) if dim == 2 else None, style=c.style or {})
 
 
 def _line_json(c, i):
@@ -175,6 +175,12 @@ def move_cell(pos, step):
 
 def move_point(i, x, y):
     session.move_point(session.cells[int(i)], x, y)
+    return state()
+
+
+def set_style(i, style_json):
+    """Options of the figure drawn by line i (from its properties panel); {} resets them."""
+    session.cells[int(i)].style = json.loads(style_json) or None
     return state()
 
 

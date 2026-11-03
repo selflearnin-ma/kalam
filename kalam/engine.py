@@ -231,6 +231,7 @@ class Cell:
         self.id = Cell._next
         Cell._next += 1
         self.text, self.kind, self.visible, self.color = text, kind, visible, color
+        self.style = None          # figure options set in its properties panel (size, axes, colours…)
         self.block = self.id if block is None else block
         self.reset()
 
@@ -437,13 +438,14 @@ class Session:
             for ln in lines:
                 c = self.add_cell(ln, block=ids.get(key))
                 ids.setdefault(key, c.block)
-                c.visible, c.color = d.get('visible', True), d.get('color')
+                c.visible, c.color, c.style = d.get('visible', True), d.get('color'), d.get('style')
         if not self.cells:
             self.add_cell()
         self.evaluate_all()
 
     def cells_json(self):
-        return [dict(text=c.text, block=c.block, visible=c.visible, color=c.color) for c in self.cells]
+        return [dict(text=c.text, block=c.block, visible=c.visible, color=c.color, **({'style': c.style} if c.style else {}))
+                for c in self.cells]
 
     # ------------------------------------------------------------ cells on screen (blocks of lines)
     def blocks(self):
@@ -458,13 +460,13 @@ class Session:
         at = self.index(old[0]) if old else len(self.cells)
         keep = {}                                  # unchanged lines keep their colour and visibility
         for c in old:
-            keep.setdefault(c.text, (c.visible, c.color))
+            keep.setdefault(c.text, (c.visible, c.color, c.style))
             self.cells.remove(c)
             self._snap.pop(c.id, None)
         lines = [ln for ln in text.split('\n') if ln.strip()] or ['']
         for k, ln in enumerate(lines):
             c = self.add_cell(ln.rstrip(), at=at + k, block=b)
-            c.visible, c.color = keep.get(c.text, (True, None))
+            c.visible, c.color, c.style = keep.get(c.text, (True, None, None))
         self.evaluate_from(at)
 
     def insert_block(self, pos, text=''):

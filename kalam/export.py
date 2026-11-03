@@ -150,7 +150,7 @@ def to_latex(session, lang='fr'):
             txt = ''.join('$%s$' % s if is_math else s for is_math, s in c.parts)
             body.append(_tex_text(txt) + '\n')
         elif c.shows_figure and dimension(c.value.items[0]) == 2:
-            pic = tikz_picture(c.value.items, c.labels, figure_window(c.value.items))
+            pic = tikz_picture(c.value.items, c.labels, figure_window(c.value.items), c.style)
             body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(pic))
         elif c.shows_figure:
             body.append('% 3D figure: not exported')
@@ -250,9 +250,32 @@ def figure_window(items):
     return [math.floor(x0), math.ceil(x1), math.floor(y0), math.ceil(y1)]
 
 
-def tikz_picture(items, labels, window):
-    """One 2D figure as a tikzpicture: tkz-euclide for geometry, tkz-fct for functions, 2 decimals."""
-    xmin, xmax, ymin, ymax = window
+def _obj_style(style, name, k):
+    """Options of object k of a figure (keyed by its name, or #k when unnamed)."""
+    return ((style or {}).get('objs') or {}).get(name or '#%d' % k) or {}
+
+
+def _tikz_opt(o, extra=''):
+    """tikz options for an object's colour, thickness and dashes; '' when it has none."""
+    opts = [extra] if extra else []
+    c = o.get('color')
+    if c and re.fullmatch(r'#[0-9a-fA-F]{6}', c):
+        opts.append('color={rgb,255:red,%d;green,%d;blue,%d}' % tuple(int(c[i:i + 2], 16) for i in (1, 3, 5)))
+    if o.get('thick'):
+        opts.append('line width=%spt' % fmt(float(o['thick']) * 0.4))
+    if o.get('dash'):
+        opts.append('dashed')
+    return '[%s]' % ','.join(opts) if opts else ''
+
+
+def tikz_picture(items, labels, window, style=None):
+    """One 2D figure as a tikzpicture: tkz-euclide for geometry, tkz-fct for functions, 2 decimals.
+    style: options from the figure's properties panel (window, grid, axes, colours, labels, hidden objects)."""
+    st = style or {}
+    xmin, xmax, ymin, ymax = [st[k] if isinstance(st.get(k), (int, float)) else w
+                              for k, w in zip(('xmin', 'xmax', 'ymin', 'ymax'), window)]
+    xmin, xmax, ymin, ymax = math.floor(xmin), math.ceil(xmax), math.floor(ymin), math.ceil(ymax)
+    opt = ['']
     defs, draws, fcts, pts, named, skipped = [], [], [], [], [], []
     aux = [0]
     known = {}      # (x, y) -> point name, so lines reuse A, B instead of new points
@@ -270,7 +293,7 @@ def tikz_picture(items, labels, window):
 
     def explicit(expr, var, a=None, b=None):
         dom = '%s:%s' % (fmt(xmin if a is None else a), fmt(xmax if b is None else b))
-        fcts.append('\\tkzFct[domain=%s,thick]{%s}' % (dom, _gp(expr, var)))
+        fcts.append('\\tkzFct%s{%s}' % (_tikz_opt(st_o[0], 'domain=%s,thick' % dom), _gp(expr, var)))
 
     def draw(v, name):
         if isinstance(v, (list, tuple)):
@@ -278,21 +301,21 @@ def tikz_picture(items, labels, window):
                 draw(i, None)
         elif isinstance(v, sp.Point2D):
             n = P(v, name if name and name.isidentifier() and name.isascii() else None)
-            pts.append(n)
-            if n == name:
+            pts.append((n, opt[0]))
+            if n == name and st_o[0].get('label', True):
                 named.append(n)
         elif isinstance(v, sp.Segment2D):
-            draws.append('\\tkzDrawSegment(%s,%s)' % (P(v.p1), P(v.p2)))
+            draws.append('\\tkzDrawSegment%s(%s,%s)' % (opt[0], P(v.p1), P(v.p2)))
         elif isinstance(v, sp.Ray2D):
-            draws.append('\\tkzDrawLine[add=0 and 20](%s,%s)' % (P(v.p1), P(v.p2)))
+            draws.append('\\tkzDrawLine%s(%s,%s)' % (_tikz_opt(st_o[0], 'add=0 and 20'), P(v.p1), P(v.p2)))
         elif isinstance(v, sp.Line2D):
-            draws.append('\\tkzDrawLine[add=20 and 20](%s,%s)' % (P(v.p1), P(v.p2)))
+            draws.append('\\tkzDrawLine%s(%s,%s)' % (_tikz_opt(st_o[0], 'add=20 and 20'), P(v.p1), P(v.p2)))
         elif isinstance(v, sp.Circle):
             o = P(v.center)
             r = P(v.center + sp.Point(v.radius, 0))
-            draws.append('\\tkzDrawCircle(%s,%s)' % (o, r))
+            draws.append('\\tkzDrawCircle%s(%s,%s)' % (opt[0], o, r))
         elif isinstance(v, sp.Polygon):
-            draws.append('\\tkzDrawPolygon(%s)' % ','.join(P(p) for p in v.vertices))
+            draws.append('\\tkzDrawPolygon%s(%s)' % (opt[0], ','.join(P(p) for p in v.vertices)))
         elif isinstance(v, sp.Lambda) and len(v.variables) == 1:
             explicit(v.expr, v.variables[0])
         elif isinstance(v, runtime.Graph):
@@ -300,21 +323,27 @@ def tikz_picture(items, labels, window):
         elif isinstance(v, sp.Equality) and v.lhs == runtime.y and not v.rhs.has(runtime.y):
             explicit(v.rhs, runtime.x)
         elif isinstance(v, runtime.Curve) and v.dim == 2:
-            fcts.append('\\tkzFctPar[domain=%s:%s,thick]{%s}{%s}' % (
-                fmt(v.a), fmt(v.b), _gp(v.comps[0], v.var).replace('\\x', 't'),
+            fcts.append('\\tkzFctPar%s{%s}{%s}' % (
+                _tikz_opt(st_o[0], 'domain=%s:%s,thick' % (fmt(v.a), fmt(v.b))), _gp(v.comps[0], v.var).replace('\\x', 't'),
                 _gp(v.comps[1], v.var).replace('\\x', 't')))
         else:
             skipped.append(name or type(v).__name__)
 
-    for v, name in zip(items, labels):
+    st_o = [{}]
+    for k, (v, name) in enumerate(zip(items, labels)):
+        st_o[0] = _obj_style(st, name, k)
+        if st_o[0].get('hide'):
+            continue
+        opt[0] = _tikz_opt(st_o[0])
         draw(v, name)
     scale = min(1, 10 / (xmax - xmin), 8 / (ymax - ymin))      # at most 10 cm x 8 cm on the page
     out = ['\\begin{tikzpicture}[scale=%s]' % fmt(scale),
            '\\tkzInit[xmin=%d,xmax=%d,ymin=%d,ymax=%d]' % (xmin, xmax, ymin, ymax),
-           '\\tkzGrid[color=gray!25]', '\\tkzAxeXY', '\\tkzClip[space=.5]']
+           ] + (['\\tkzGrid[color=gray!25]'] if st.get('grid', True) else []) + (
+           ['\\tkzAxeXY'] if st.get('axes', True) else []) + ['\\tkzClip[space=.5]']
     out += defs + draws + fcts
-    if pts:
-        out.append('\\tkzDrawPoints(%s)' % ','.join(pts))
+    for o in dict.fromkeys(o for _, o in pts):      # points grouped by colour
+        out.append('\\tkzDrawPoints%s(%s)' % (o, ','.join(n for n, oo in pts if oo == o)))
     if named:
         out.append('\\tkzLabelPoints[above right](%s)' % ','.join(named))
     if skipped:
@@ -328,7 +357,7 @@ def _figures(session):
 
 def figure_tkz(session):
     """Every 2D figure of the notebook, one page each (standalone)."""
-    pics = [tikz_picture(c.value.items, c.labels, figure_window(c.value.items))
+    pics = [tikz_picture(c.value.items, c.labels, figure_window(c.value.items), c.style)
             for c in _figures(session) if dimension(c.value.items[0]) == 2]
     out = ['% Generated by Kalam. tkz-fct needs gnuplot: compile with  pdflatex --shell-escape',
            '\\documentclass[tikz,border=3mm]{standalone}',

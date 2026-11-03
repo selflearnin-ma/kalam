@@ -80,6 +80,9 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   `Tracer(f, A, c)` (any 2D or 3D objects), `Courbe(f, a, b)` (one function), `Graphe3D(x^2 - y^2)`.
   To build one figure step by step: `G = Graphique()`, then `G.Tracer(f, A)`, `G.Courbe(sin(x))`, … (each adds
   to G and shows nothing), then the line `G` shows the figure with all its objects.
+  The ⚙ button opens the figure's properties: width, height, axes, grid, x/y window, tick step (`1`, `0.5`,
+  `pi/2` for labels in π), and for each object colour, label, thickness, dashes, visible. They are saved with
+  the notebook and used by the LaTeX export (except the tick step).
   In a figure: drag to pan, wheel or pinch to zoom, + − ⌂ buttons; drag a free point (`A = (1, 2)`) and its line
   is rewritten. Figures are exported to LaTeX (tkz) in place.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and

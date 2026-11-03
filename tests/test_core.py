@@ -167,6 +167,13 @@ def test_web_bridge():
     assert json.loads(web.state())['lines'][1]['text'] == 'A = (3, 4)'
     web.insert_cell(1, '"texte"')
     assert json.loads(web.klm_text())['cells'][-1]['text'] == '"texte"'
+    # figure options: kept in the file, when the line is edited unchanged, and used by the tkz export
+    web.set_style(3, json.dumps({'grid': False, 'objs': {'f': {'color': '#ff0000', 'dash': True}, 'D': {'hide': True}}}))
+    web.load_klm_text(web.klm_text())
+    web.set_cell(0, 'f(x) = x^2\nA = (3, 5)\nD = x^2 + y^2 < 4\nTracer(f, A, D)\nGraphe3D(x y)')
+    assert json.loads(web.state())['lines'][3]['figure']['style']['objs']['f'] == {'color': '#ff0000', 'dash': True}
+    fig = web.export_text('fig', 'fr')
+    assert 'tkzGrid' not in fig and 'red,255;green,0;blue,0},dashed]' in fig
     names = zipfile.ZipFile(io.BytesIO(web.export_zip('k'))).namelist()
     assert sorted(names) == ['k.klm', 'k.py', 'k.tex', 'k_figures.tex']
 

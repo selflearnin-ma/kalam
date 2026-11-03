@@ -102,6 +102,25 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .fig canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 .vbtns { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; }
 .vbtns button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); font-size: 15px; }
+.vbtns button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
+.vbtns button:hover { border-color: var(--accent); color: var(--accent); }
+.fig.fig3d .vbtns { z-index: 3; top: 8px; left: 8px; right: auto; }
+#dFig { position: fixed; inset: 70px max(16px, env(safe-area-inset-right, 0px)) auto auto; margin: 0; width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 90px); overflow-y: auto; box-shadow: 0 16px 40px rgb(0 0 0 / 0.18); z-index: 45; }
+#dFig .dlg { gap: 12px; }
+#dFig h3 { margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fp { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 8px; align-items: center; }
+.fp > span { font-size: 13px; color: var(--muted); }
+.fp input[type=number], .fp input[type=text] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 7px; padding: 5px 7px; background: var(--bg); direction: ltr; }
+.fp label { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.objs { display: flex; flex-direction: column; gap: 6px; }
+.obj { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px; }
+.obj input[type=color] { width: 28px; height: 28px; border: none; padding: 0; background: none; border-radius: 6px; }
+.obj b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: start; }
+.obj .opts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); }
+.obj .opts label { display: flex; gap: 4px; align-items: center; }
+.obj input[type=range] { width: 80px; }
+@media (max-width: 620px) { #dFig { inset: auto 0 0 0; width: 100%; max-height: 60vh; border-radius: 14px 14px 0 0; } }
 .coords { position: absolute; bottom: 6px; left: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted); direction: ltr; }
 
 /* phone */
@@ -203,6 +222,7 @@ dialog::backdrop { background: rgb(10 14 22 / 0.45); }
   </div>
 </div></dialog>
 
+<dialog id="dFig"><div class="dlg" id="figBody"></div></dialog>
 <dialog id="dConfirm"><div class="dlg"><p id="cfMsg" style="margin:0"></p><div class="row"><button class="btn primary" id="cfYes" data-t="yes"></button><button class="btn" data-close data-t="no"></button></div></div></dialog>
 <div id="toast" hidden></div>
 
@@ -318,6 +338,7 @@ function setState(json) {
 function blockText(b) { return S.blocks[b].lines.map(i => S.cells[i].text).join('\n'); }
 function renderNotebook() {
   figs.forEach(f => f.destroy()); figs.clear();
+  if ($('#dFig').open && !(S.cells[figLine] || {}).figure) $('#dFig').close();   // its figure is gone
   const nb = $('#nb'); nb.textContent = '';
   S.blocks.forEach((b, k) => nb.appendChild(cellEl(k)));
   const adds = document.createElement('div'); adds.className = 'adds';
@@ -478,21 +499,48 @@ function fn(args, js) {
 }
 const figs = new Map();       // line index -> live figure of the notebook on screen
 const figViews = new Map();   // line index -> 2D view (pan/zoom), kept when the notebook is rebuilt
+// figure options (properties panel): size, axes, grid, window, ticks, and per object colour / label / thickness…
+const GEAR = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const figStyle = line => (S.cells[line] && S.cells[line].figure && S.cells[line].figure.style) || {};
+const objKey = (it, k) => it.name || '#' + k;
+function objStyle(st, it, k) {
+  const o = (st.objs || {})[objKey(it, k)] || {};
+  return { color: o.color || COLORS[k % COLORS.length], label: o.label !== false, thick: +o.thick || 2.2, dash: !!o.dash, hide: !!o.hide };
+}
+function sizeBox(box, st) {
+  box.style.height = st.h ? st.h + 'px' : '';
+  box.style.width = st.w ? st.w + 'px' : ''; box.style.maxWidth = '100%';
+}
+// "1", "0.5", "pi/2", "π/4" -> number (null: automatic)
+function stepVal(t) {
+  t = String(t || '').trim().replace(/π/g, 'pi'); if (!t) return null;
+  try { const v = Function('pi', '"use strict"; return (' + t.replace(/[^0-9pi.+\-*/() ]/g, '') + ');')(Math.PI); return v > 0 && isFinite(v) ? v : null; }
+  catch (e) { return null; }
+}
+function piLabel(v) {   // 1.5707… -> π/2
+  const q = v / Math.PI;
+  for (let d = 1; d <= 12; d++) { const n = Math.round(q * d); if (Math.abs(q * d - n) < 1e-6) {
+    const num = n === 1 ? '' : n === -1 ? '−' : String(n).replace('-', '−'); return d === 1 ? num + 'π' : num + 'π/' + d; } }
+  return String(+v.toPrecision(4));
+}
 function figureEl(i) {
   const box = document.createElement('div');
   box.className = 'fig' + (S.cells[i].figure.dim === 3 ? ' fig3d' : '');
-  box.dir = 'ltr';
+  box.dir = 'ltr'; sizeBox(box, figStyle(i));
   figs.set(i, S.cells[i].figure.dim === 3 ? fig3d(box, i) : fig2d(box, i));
   return box;
 }
 function fig2d(box, line) {
-  box.innerHTML = '<canvas></canvas><div class="vbtns"><button data-z="in" aria-label="zoom +">+</button><button data-z="out" aria-label="zoom −">−</button><button data-z="home" aria-label="home">⌂</button></div><div class="coords"></div>';
+  box.innerHTML = `<canvas></canvas><div class="vbtns"><button data-z="in" aria-label="zoom +">+</button><button data-z="out" aria-label="zoom −">−</button><button data-z="home" aria-label="home">⌂</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div><div class="coords"></div>`;
   const cv = box.querySelector('canvas'), g = cv.getContext('2d'), coords = box.querySelector('.coords');
   const figure = () => S.cells[line] && S.cells[line].figure;
-  const fit = () => { const [x0, x1, y0, y1] = figure().window, w = cv.clientWidth, h = cv.clientHeight;
-    // figures are wide: favour the x range (steep parts may leave the top and bottom)
+  const winKey = () => { const st = figStyle(line); return ['xmin', 'xmax', 'ymin', 'ymax'].map(k => st[k] ?? '').join(','); };
+  const fit = () => { const st = figStyle(line), set = winKey() !== ',,,';
+    const [x0, x1, y0, y1] = figure().window.map((v, k) => st[['xmin', 'xmax', 'ymin', 'ymax'][k]] ?? v), w = cv.clientWidth, h = cv.clientHeight;
+    // automatic: figures are wide, favour the x range (steep parts may leave the top and bottom); a chosen window shows whole
     const sx = w / (x1 - x0), sy = h / (y1 - y0);
-    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, s: Math.max(Math.min(sx, sy), sx * 0.5) * 0.95 }; };
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, s: set ? Math.min(sx, sy) * 0.98 : Math.max(Math.min(sx, sy), sx * 0.5) * 0.95 }; };
+  let lastWin = winKey();
   let V = figViews.get(line);
   const keep = () => figViews.set(line, V);
   const SX = x => cv.clientWidth / 2 + (x - V.cx) * V.s, SY = y => cv.clientHeight / 2 - (y - V.cy) * V.s;
@@ -508,34 +556,44 @@ function fig2d(box, line) {
   }
   function draw() {
     const F = figure(), w = cv.clientWidth, h = cv.clientHeight; if (!w || !F || !V) return;
-    const v = view();
+    const v = view(), st = F.style || {};
     g.clearRect(0, 0, w, h); g.fillStyle = css('--panel'); g.fillRect(0, 0, w, h);
     const raw = 90 / V.s, e10 = Math.pow(10, Math.floor(Math.log10(raw)));
-    const step = [1, 2, 5, 10].map(m => m * e10).find(t => t >= raw);
-    for (const [t, col] of [[step / 5, css('--grid-minor')], [step, css('--grid-major')]]) {
-      g.strokeStyle = col; g.lineWidth = 1; g.beginPath();
-      for (let k = Math.ceil(v.xmin / t); k <= v.xmax / t; k++) { const X = Math.round(SX(k * t)) + .5; g.moveTo(X, 0); g.lineTo(X, h); }
-      for (let k = Math.ceil(v.ymin / t); k <= v.ymax / t; k++) { const Y = Math.round(SY(k * t)) + .5; g.moveTo(0, Y); g.lineTo(w, Y); }
-      g.stroke();
+    const auto = [1, 2, 5, 10].map(m => m * e10).find(t => t >= raw);
+    // a chosen tick step too dense for this zoom is doubled until labels fit
+    const thin = t => { while (t * V.s < 28) t *= 2; return t; };
+    const xs = stepVal(st.xstep), ys = stepVal(st.ystep), xstep = xs ? thin(xs) : auto, ystep = ys ? thin(ys) : auto;
+    if (st.grid !== false) {
+      const layers = xs || ys ? [[xstep, ystep, css('--grid-major')]] : [[auto / 5, auto / 5, css('--grid-minor')], [auto, auto, css('--grid-major')]];
+      for (const [tx, ty, col] of layers) {
+        g.strokeStyle = col; g.lineWidth = 1; g.beginPath();
+        for (let k = Math.ceil(v.xmin / tx); k <= v.xmax / tx; k++) { const X = Math.round(SX(k * tx)) + .5; g.moveTo(X, 0); g.lineTo(X, h); }
+        for (let k = Math.ceil(v.ymin / ty); k <= v.ymax / ty; k++) { const Y = Math.round(SY(k * ty)) + .5; g.moveTo(0, Y); g.lineTo(w, Y); }
+        g.stroke();
+      }
     }
-    const ox = Math.min(Math.max(SX(0), 0), w), oy = Math.min(Math.max(SY(0), 0), h);
-    g.strokeStyle = css('--axis'); g.lineWidth = 1.3; g.beginPath(); g.moveTo(0, oy); g.lineTo(w, oy); g.moveTo(ox, 0); g.lineTo(ox, h); g.stroke();
-    g.fillStyle = css('--muted'); g.font = '11px ' + css('--mono'); g.direction = 'ltr';
-    const lab = x => String(+x.toPrecision(10));
-    g.textAlign = 'center';
-    for (let k = Math.ceil(v.xmin / step); k <= v.xmax / step; k++) if (k) g.fillText(lab(k * step), SX(k * step), Math.min(oy + 15, h - 4));
-    g.textAlign = 'right';
-    for (let k = Math.ceil(v.ymin / step); k <= v.ymax / step; k++) if (k) g.fillText(lab(k * step), Math.max(ox - 5, 28), SY(k * step) + 4);
+    if (st.axes !== false) {
+      const ox = Math.min(Math.max(SX(0), 0), w), oy = Math.min(Math.max(SY(0), 0), h);
+      g.strokeStyle = css('--axis'); g.lineWidth = 1.3; g.beginPath(); g.moveTo(0, oy); g.lineTo(w, oy); g.moveTo(ox, 0); g.lineTo(ox, h); g.stroke();
+      g.fillStyle = css('--muted'); g.font = '11px ' + css('--mono'); g.direction = 'ltr';
+      const labx = /pi|π/.test(st.xstep || '') ? piLabel : x => String(+x.toPrecision(10));
+      const laby = /pi|π/.test(st.ystep || '') ? piLabel : x => String(+x.toPrecision(10));
+      g.textAlign = 'center';
+      for (let k = Math.ceil(v.xmin / xstep); k <= v.xmax / xstep; k++) if (k) g.fillText(labx(k * xstep), SX(k * xstep), Math.min(oy + 15, h - 4));
+      g.textAlign = 'right';
+      for (let k = Math.ceil(v.ymin / ystep); k <= v.ymax / ystep; k++) if (k) g.fillText(laby(k * ystep), Math.max(ox - 5, 28), SY(k * ystep) + 4);
+    }
     const pts = [];
-    F.items.forEach((it, k) => { const col = COLORS[k % COLORS.length];
-      for (const p of it.scene) { try { prim(p, col, it.name, pts, v); } catch (e) { /* skip one bad object */ } } });
+    F.items.forEach((it, k) => { const o = objStyle(st, it, k); if (o.hide) return; cur = o;
+      for (const p of it.scene) { try { prim(p, o.color, o.label ? it.name : null, pts, v); } catch (e) { /* skip one bad object */ } } });
     for (const p of pts) {
-      g.beginPath(); g.arc(SX(p.x), SY(p.y), p.free ? 5.5 : 4.5, 0, 7);
+      g.beginPath(); g.arc(SX(p.x), SY(p.y), p.r + (p.free ? 1 : 0), 0, 7);
       g.fillStyle = p.col; g.fill(); g.lineWidth = 2; g.strokeStyle = css('--panel'); g.stroke();
       if (p.label) label(p.label, SX(p.x) + 2, SY(p.y), p.col);
     }
   }
-  function stroke(col) { g.strokeStyle = col; g.lineWidth = 2.2; g.lineCap = 'round'; g.lineJoin = 'round'; g.setLineDash([]); }
+  let cur = null;   // style of the object being drawn
+  function stroke(col) { g.strokeStyle = col; g.lineWidth = cur ? cur.thick : 2.2; g.lineCap = 'round'; g.lineJoin = 'round'; g.setLineDash(cur && cur.dash ? [7, 5] : []); }
   function path(xs, ys) {
     const h = cv.clientHeight; g.beginPath(); let down = false, prev = 0;
     for (let k = 0; k < xs.length; k++) {
@@ -553,7 +611,7 @@ function fig2d(box, line) {
   function prim(p, col, name, pts, v) {
     stroke(col);
     switch (p.k) {
-      case 'pt': pts.push({ x: p.p[0], y: p.p[1], col, label: name, free: p.free }); break;
+      case 'pt': pts.push({ x: p.p[0], y: p.p[1], col, label: name, free: p.free, r: cur ? 2 + cur.thick : 4.5 }); break;
       case 'seg': g.beginPath(); g.moveTo(SX(p.a[0]), SY(p.a[1])); g.lineTo(SX(p.b[0]), SY(p.b[1])); g.stroke(); break;
       case 'vec': {
         const ax = SX(p.a[0]), ay = SY(p.a[1]), bx = SX(p.b[0]), by = SY(p.b[1]), t = Math.atan2(by - ay, bx - ax);
@@ -600,6 +658,8 @@ function fig2d(box, line) {
       g.imageSmoothingEnabled = true; g.drawImage(off, 0, 0, (nx - 1) * N, (ny - 1) * N);
       if (p.op.length === 1) g.setLineDash([6, 5]);
     }
+    if (p.op === '=' && cur && cur.dash) g.setLineDash([7, 5]);
+    g.lineWidth = cur ? cur.thick : 2.2;
     g.beginPath();
     const at = (k1, j1, k2, j2) => { const a = Z[j1 * nx + k1], b = Z[j2 * nx + k2], t = a / (a - b); return [(k1 + (k2 - k1) * t) * N, (j1 + (j2 - j1) * t) * N]; };
     for (let j = 0; j < ny - 1; j++) for (let k = 0; k < nx - 1; k++) {
@@ -662,11 +722,17 @@ function fig2d(box, line) {
   function zoomAt(k, x, y) { const wx = WX(x), wy = WY(y); V.s = Math.min(5000, Math.max(2, V.s * k)); V.cx += wx - WX(x); V.cy += wy - WY(y); keep(); draw(); }
   box.querySelector('.vbtns').onclick = e => {
     const z = e.target.closest('[data-z]'); if (!z) return;
+    if (z.dataset.z === 'opts') return figPanel(line);
     if (z.dataset.z === 'home') { V = fit(); keep(); draw(); }
     else zoomAt(z.dataset.z === 'in' ? 1.25 : 0.8, cv.clientWidth / 2, cv.clientHeight / 2);
   };
   const ro = new ResizeObserver(resize); ro.observe(cv);
-  return { update: draw, destroy: () => ro.disconnect() };
+  function update() {
+    sizeBox(box, figStyle(line));
+    if (winKey() !== lastWin) { lastWin = winKey(); V = fit(); keep(); }   // a new window in the panel: show it
+    draw();
+  }
+  return { update, destroy: () => ro.disconnect() };
 }
 
 // 3D figures: Plotly, loaded on first use
@@ -711,19 +777,86 @@ function traces3d(p, col, name) {
   return T;
 }
 function fig3d(box, line) {
+  box.innerHTML = `<div class="p3" style="width:100%;height:100%"></div><div class="vbtns"><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div>`;
+  const plot = box.querySelector('.p3');
+  box.querySelector('.vbtns').onclick = () => figPanel(line);
   async function draw() {
     const F = S.cells[line] && S.cells[line].figure; if (!F) return;
+    const st = F.style || {};
     try { await loadPlotly(); } catch (e) { box.textContent = 'Plotly could not load.'; return; }
     const T = [];
-    F.items.forEach((it, k) => { for (const p of it.scene) { try { T.push(...traces3d(p, COLORS[k % COLORS.length], it.name)); } catch (e) {} } });
-    const ax = t => ({ range: [-R3, R3], title: { text: t }, gridcolor: css('--grid-major'), zerolinecolor: css('--axis'), backgroundcolor: css('--bg'), showbackground: true, color: css('--muted') });
-    Plotly.react(box, T, { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: css('--panel'), showlegend: false, uirevision: 'k',
+    F.items.forEach((it, k) => { const o = objStyle(st, it, k); if (o.hide) return;
+      for (const p of it.scene) { try { T.push(...traces3d(p, o.color, o.label ? it.name : '')); } catch (e) {} } });
+    const ax = t => ({ range: [-R3, R3], title: { text: t }, gridcolor: css('--grid-major'), zerolinecolor: css('--axis'), backgroundcolor: css('--bg'), showbackground: true, color: css('--muted'),
+      visible: st.axes !== false, showgrid: st.grid !== false });
+    Plotly.react(plot, T, { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: css('--panel'), showlegend: false, uirevision: 'k',
       font: { family: css('--font'), color: css('--ink') }, scene: { xaxis: ax('x'), yaxis: ax('y'), zaxis: ax('z'), aspectmode: 'cube' } },
       { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['toImage'] });
   }
   draw();
-  return { update: draw, destroy: () => { if (window.Plotly) Plotly.purge(box); } };
+  return { update: () => { sizeBox(box, figStyle(line)); draw().then(() => window.Plotly && Plotly.Plots.resize(plot)); },
+           destroy: () => { if (window.Plotly) Plotly.purge(plot); } };
 }
+
+// ------------------------------------------------------------------ figure properties panel (non-modal: the figure stays visible)
+let figLine = -1;
+function figPanel(line) {
+  figLine = line; const d = $('#dFig'), F = S.cells[line].figure, st = F.style || {}, is2 = F.dim === 2;
+  const num = (k, ph) => `<input type="number" data-k="${k}" value="${st[k] ?? ''}" placeholder="${esc(ph)}">`;
+  const txt = (k, ph) => `<input type="text" data-k="${k}" value="${esc(st[k] ?? '')}" placeholder="${esc(ph)}">`;
+  const chk = (k, t) => `<label><input type="checkbox" data-k="${k}" ${st[k] !== false ? 'checked' : ''}>${esc(tr(t))}</label>`;
+  let h = `<div class="row"><h2>${esc(tr('fig_props'))}</h2><div class="spacer"></div><button class="btn" data-close>${esc(tr('close'))}</button></div>
+    <h3>${esc(tr('fig_graphic'))}</h3><div class="fp">
+    <span>${esc(tr('fig_width'))}</span>${num('w', tr('fig_full'))}<span></span>
+    <span>${esc(tr('fig_height'))}</span>${num('h', is2 ? '340' : '400')}<span></span>
+    <span></span>${chk('axes', 'fig_axes')}${chk('grid', 'fig_grid')}`;
+  if (is2) {
+    const win = F.window;
+    h += `<span>x ${esc(tr('fig_from'))} / ${esc(tr('fig_to'))}</span>${num('xmin', win[0])}${num('xmax', win[1])}
+      <span>y ${esc(tr('fig_from'))} / ${esc(tr('fig_to'))}</span>${num('ymin', win[2])}${num('ymax', win[3])}
+      <span>${esc(tr('fig_unit'))} x / y</span>${txt('xstep', tr('fig_auto') + ' · 1 · pi/2')}${txt('ystep', tr('fig_auto'))}`;
+  }
+  h += `</div><h3>${esc(tr('fig_objects'))}</h3><div class="objs">`;
+  F.items.forEach((it, k) => { const o = objStyle(st, it, k), key = esc(objKey(it, k));
+    h += `<div class="obj" data-o="${key}"><input type="color" data-p="color" value="${o.color}" aria-label="${esc(tr('fig_color'))}">
+      <b>${esc(it.name || '#' + (k + 1))}</b><label><input type="checkbox" data-p="show" ${o.hide ? '' : 'checked'}>${esc(tr('fig_show'))}</label>
+      <div class="opts">${it.name ? `<label><input type="checkbox" data-p="label" ${o.label ? 'checked' : ''}>${esc(tr('fig_label'))}</label>` : ''}
+      <label>${esc(tr('fig_thick'))}<input type="range" data-p="thick" min="1" max="6" step="0.2" value="${o.thick}"></label>
+      <label><input type="checkbox" data-p="dash" ${o.dash ? 'checked' : ''}>${esc(tr('fig_dash'))}</label></div></div>`; });
+  h += `</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
+  $('#figBody').innerHTML = h;
+  $('#figReset').onclick = () => { setFigStyle({}); figPanel(line); };
+  if (!d.open) d.show();
+}
+// read the panel back into a style (defaults left out, so files stay small)
+function readFigPanel() {
+  const st = {}, n = v => v === '' ? null : +v;
+  $('#figBody').querySelectorAll('.fp [data-k]').forEach(el => {
+    const k = el.dataset.k;
+    if (el.type === 'checkbox') { if (!el.checked) st[k] = false; }
+    else if (el.type === 'number') { const v = n(el.value); if (v != null && isFinite(v) && (!'wh'.includes(k) || v >= 80)) st[k] = v; }
+    else if (el.value.trim()) st[k] = el.value.trim();
+  });
+  const F = S.cells[figLine].figure, objs = {};
+  $('#figBody').querySelectorAll('.obj').forEach((row, k) => {
+    const def = objStyle({}, F.items[k], k), o = {}, get = p => row.querySelector(`[data-p="${p}"]`);
+    if (get('color').value !== def.color) o.color = get('color').value;
+    if (!get('show').checked) o.hide = true;
+    if (get('label') && !get('label').checked) o.label = false;
+    if (+get('thick').value !== def.thick) o.thick = +get('thick').value;
+    if (get('dash').checked) o.dash = true;
+    if (Object.keys(o).length) objs[row.dataset.o] = o;
+  });
+  if (Object.keys(objs).length) st.objs = objs;
+  return st;
+}
+function setFigStyle(st) {
+  setState(call('set_style', figLine, JSON.stringify(st)));
+  const f = figs.get(figLine); if (f) f.update();
+  scheduleSave(); touched();
+}
+$('#figBody').addEventListener('input', () => setFigStyle(readFigPanel()));
+$('#figBody').addEventListener('change', () => setFigStyle(readFigPanel()));
 
 // ------------------------------------------------------------------ files & export
 function confirmBox(msg, yes) {
@@ -791,7 +924,7 @@ $('#bNew').onclick = askNew;
 $('#bOpen').onclick = openDoc;
 $('#bSave').onclick = () => saveDoc(false);
 document.addEventListener('keydown', e => {
-  if (!(e.ctrlKey || e.metaKey) || e.altKey || document.querySelector('dialog[open]')) return;
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || document.querySelector('dialog[open]:not(#dFig)')) return;
   const k = e.key.toLowerCase(), act = { n: askNew, o: openDoc, s: () => saveDoc(e.shiftKey), e: openExport }[k];
   if (act) { e.preventDefault(); act(); }
 });
