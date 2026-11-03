@@ -340,6 +340,7 @@ function cellEl(k) {
     const row = document.createElement('div'); row.className = 'edrow';
     row.append(ed, Object.assign(document.createElement('button'), { className: 'ok', textContent: '✓', title: tr('done'), onclick: () => commit(k, ed.value, false) }));
     ed.addEventListener('keydown', e => editKey(e, k, ed));
+    ed.addEventListener('beforeinput', e => autoPair(e, ed));
     body.appendChild(row);
     return el;
   }
@@ -385,6 +386,25 @@ function commit(k, text, next) {
   if (!next) return;                                       // stay on this cell, showing its output
   if (k === S.blocks.length - 1 && text.trim()) apply(call('insert_cell', k + 1, ''));
   if (k + 1 < S.blocks.length) startEdit(k + 1);
+}
+// ( [ { " close themselves; typing the closing one steps over it; Backspace on an empty pair removes both
+const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"' };
+function edInsert(ed, text) {   // execCommand keeps Ctrl+Z working; setRangeText where it is missing
+  if (!document.execCommand(text ? 'insertText' : 'delete', false, text)) ed.setRangeText(text, ed.selectionStart, ed.selectionEnd, 'end');
+}
+function autoPair(e, ed) {
+  const a = ed.selectionStart, b = ed.selectionEnd, v = ed.value, c = e.data;
+  if (e.inputType === 'insertText' && c && c.length === 1) {
+    if (a === b && v[a] === c && ')]}"'.includes(c)) { e.preventDefault(); ed.selectionStart = ed.selectionEnd = a + 1; return; }
+    if (!PAIRS[c] || (c === '"' && a === b && /\w/.test(v[a - 1] || ''))) return;
+    e.preventDefault();
+    edInsert(ed, c + v.slice(a, b) + PAIRS[c]);
+    ed.selectionStart = a + 1; ed.selectionEnd = b + 1;      // cursor (or the wrapped selection) inside the pair
+  } else if (e.inputType === 'deleteContentBackward' && a === b && a > 0 && PAIRS[v[a - 1]] === v[a]) {
+    e.preventDefault();
+    ed.selectionStart = a - 1; ed.selectionEnd = a + 1; edInsert(ed, '');
+  } else return;
+  ed.dispatchEvent(new Event('input'));
 }
 function editKey(e, k, ed) {
   // Enter: new line; Ctrl/Cmd+Enter: evaluate, stay on the cell; Shift+Enter: evaluate, go to the next cell
