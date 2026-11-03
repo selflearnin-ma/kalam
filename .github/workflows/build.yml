@@ -153,7 +153,8 @@ jobs:
           path: ipa/*.ipa
 
   release:
-    if: ${{ !cancelled() && needs.desktop.result == 'success' && needs.android.result == 'success'
+    # publish what was built: a platform that failed (e.g. no macOS runner free) keeps its previous file
+    if: ${{ !cancelled() && needs.desktop.result != 'skipped' && needs.android.result == 'success'
             && (inputs.release != '' || startsWith(github.ref, 'refs/tags/v')) }}
     needs: [desktop, android, ios]      # an iOS failure does not block the release
     runs-on: ubuntu-22.04
