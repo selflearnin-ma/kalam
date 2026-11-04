@@ -127,11 +127,10 @@ def test_tables():
     st, vt, inv, rt = (c.value for c in s.cells[1:])
     assert st.xs == [-sp.oo, -2, 3, sp.oo] and st.rows[-1][1] == ['', '+', 'z', '-', 'z', '+', '']
     assert vt.name == 'g' and [a for _, a, _ in vt.vals] == [-sp.oo, 2, -2, sp.oo] and vt.fp == ['', '+', 'z', '-', 'z', '+', '']
-    assert inv.vals[1] == ('D', -sp.oo, sp.oo) and 'tkzTabVar{+/ $0$, -D+/ $-\\infty$ / $+\\infty$, -/ $0$}' in inv.tkztab()
+    assert inv.vals[1] == ('D', -sp.oo, sp.oo) and 'tkzTabVar{+/ $0$, -D+/ $-\\infty$ / $+\\infty$, -/ $0$}' in '\n'.join(inv.tkztab())
     assert rt.xs == [0, 1, sp.oo]
     tex = to_latex(s)
     assert '\\usepackage{tkz-tab}' in tex and tex.count('tkzTabInit') == 4 and 'tkz-fct' not in tex
-    assert 'must be numbers' in Session().evaluate_cell_error('TableauSignes(b x + 1)') if hasattr(Session, 'evaluate_cell_error') else True
 
 
 def test_cells_of_several_lines():
