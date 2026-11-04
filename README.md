@@ -107,8 +107,12 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 - `TableauSignes` and `TableauVariations` are tables too: `V = TableauVariations(f)` then `V.Ligne("signe de $f$", …)`
   adds a sign row under it.
 - The ⚙ button of a table (on hover): column width (cm), first column, text size, borders, alignment,
-  header row/column; for sign/variation tables also factor rows and dotted lines; and **the content of every
+  header row/column; for sign/variation tables also factor rows and the lines at the values (dotted, solid cut
+  at the number, or none); and **the content of every
   cell** (values in `$…$`, signs, arrows — changing an arrow moves the values up or down). Used by the LaTeX export.
+- Arrows ↗ ↘: buttons in the cell editor of a table, keys on the Clavier tab (`"↗"`), or type `"/"` and `"\\"`.
+- The Fichier menu can hide the cell numbers. The desktop apps draw their own title bar (minimize, maximize,
+  close); drag the empty part of the bar to move the window.
 - The tools button of a figure (sliders icon) shows its zoom +, −, ⌂ and ⚙ buttons.
 
 ### Input language

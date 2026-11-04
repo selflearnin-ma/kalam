@@ -635,6 +635,19 @@ class TableObj:
         return '\n'.join(' | '.join(cell_src(c) for c in r) for r in self.rows)
 
 
+def _lines(st):
+    """Vertical lines at the points of sign rows: 'dots' (default), 'solid' (cut at the number) or 'none'."""
+    if st.get('lines') in ('dots', 'solid', 'none'):
+        return st['lines']
+    return 'none' if st.get('dots') is False else 'dots'      # files saved before the choice existed
+
+
+def _tikz_lines(st):
+    """tkz-tab draws its point lines dotted; solid lines are a style switch inside the picture."""
+    # the zeros of tkz-tab are plain nodes: a white fill cuts the solid line at the number
+    return ['\\tikzset{t style/.style={style=solid}, every node/.append style={fill=white}}'] if _lines(st) == 'solid' else []
+
+
 class _XTable(TableObj):
     """Common part of sign and variation tables: row 0 holds the points, sign rows hold marks."""
     def _point(self, c):
@@ -652,12 +665,12 @@ class _XTable(TableObj):
             elif isinstance(v, str) and v.strip() == '||':
                 k, v = 'bar', ''
             else:
-                k = 'pt' + (' dot' if st.get('dots', True) and 1 < c < n - 1 else '')
+                k = 'pt' + ({'dots': ' dot', 'solid': ' sol'}.get(_lines(st), '') if 1 < c < n - 1 else '')
             out.append({'t': cell_tex(v), 'k': k, 'r': r, 'c': c})
         return out
 
     def _tab_line(self, row, st):
-        dots = st.get('dots', True)
+        dots = _lines(st) != 'none'
         return [_tkz(v) or ('t' if dots and self._point(c) and 1 < c < len(row) - 1 else '') for c, v in enumerate(row) if c]
 
     def _tab_init(self, st, labels):
@@ -710,7 +723,7 @@ class SignTableObj(_XTable):
     def tkztab(self, style=None):
         st = style or {}
         shown = self._shown(st)
-        out = ['\\begin{tikzpicture}', self._tab_init(st, ['%s/1' % _tkz(row[0]) for _, row in shown])]
+        out = ['\\begin{tikzpicture}'] + _tikz_lines(st) + [self._tab_init(st, ['%s/1' % _tkz(row[0]) for _, row in shown])]
         out += ['\\tkzTabLine{%s}' % ', '.join(self._tab_line(row, st)) for r, row in shown if r]
         return out + ['\\end{tikzpicture}']
 
@@ -785,8 +798,12 @@ class VariationTableObj(_XTable):
                 elif self._point(c):
                     if places[c][0 if c > 1 else 1] == lvl:
                         cell['t'] = cell_tex(v)
-                elif lvl == '0':
-                    cell['t'] = cell_tex(v)
+                elif lvl == '0':                  # between two points: an arrow (drawn value to value) or text
+                    d = self._dir(v)
+                    if d != '0' or (isinstance(v, str) and v in ('→', '->')):
+                        cell['ar'] = d
+                    else:
+                        cell['t'] = cell_tex(v)
                 sub[lvl].append(cell)
         lab = {'t': cell_tex(rows[2][0]), 'k': 'lab', 'rs': 3, 'r': 2, 'c': 0}
         out += [[lab] + sub['+'], sub['0'], sub['-']]
@@ -812,7 +829,7 @@ class VariationTableObj(_XTable):
                 var.append('%s/ %s' % (lp if c > 1 else rp, _tkz(v)))
         labels = ['%s/1' % _tkz(rows[0][0]), '%s/1' % _tkz(rows[1][0]), '%s/2' % _tkz(rows[2][0])] + \
                  ['%s/1' % _tkz(r[0]) for r in rows[3:]]
-        out = ['\\begin{tikzpicture}', self._tab_init(st, labels),
+        out = ['\\begin{tikzpicture}'] + _tikz_lines(st) + [self._tab_init(st, labels),
                '\\tkzTabLine{%s}' % ', '.join(self._tab_line(rows[1], st)), '\\tkzTabVar{%s}' % ', '.join(var)]
         out += ['\\tkzTabLine{%s}' % ', '.join(self._tab_line(r, st)) for r in rows[3:]]
         return out + ['\\end{tikzpicture}']

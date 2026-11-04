@@ -45,6 +45,14 @@ header { display: flex; align-items: center; gap: 4px; padding-block: 7px; posit
 #docName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 30vw; }
 #docDirty { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 .spacer { flex: 1; }
+#winbtns { display: flex; gap: 8px; margin-inline-start: 10px; }
+#winbtns[hidden] { display: none; }
+#winbtns button { width: 30px; height: 30px; border-radius: 50%; border: none; background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); display: grid; place-items: center; padding: 0; }
+#winbtns button:hover { background: color-mix(in srgb, var(--ink) 14%, transparent); }
+#winbtns button[data-win=close]:hover { background: #e5484d; color: #fff; }
+#winbtns svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+body.nonum .cell { grid-template-columns: minmax(0, 1fr) 28px; }
+body.nonum .cell .gut { display: none; }
 #lang { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 8px; }
 
 /* one column: palette, then the notebook (figures are drawn inside the cells) */
@@ -99,6 +107,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* tables (Tableau, TableauSignes, TableauVariations) */
 .ktab { position: relative; max-width: 100%; overflow-x: auto; padding: 2px 34px; align-self: center; }
 .cedit { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.csyms { display: flex; flex-wrap: wrap; gap: 4px; }
+.csyms .btn { padding: 3px 9px; min-width: 34px; direction: ltr; }
 .crow { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px 8px; border: 1px solid var(--line); border-radius: 9px; }
 .ctitle { font-size: 12px; font-weight: 600; color: var(--muted); }
 #figBody .crow + .crow { margin-top: -4px; }
@@ -106,6 +116,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .cedit input { min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--bg); font-family: var(--mono); font-size: 12px; direction: ltr; }
 .cedit input.ed1 { border-color: var(--accent); background: var(--accent-soft); }
 .obj input.otext { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; background: var(--bg); direction: ltr; }
+.ktab svg.arrows { position: absolute; left: 0; top: 0; pointer-events: none; color: var(--ink); overflow: visible; }
+.ktab svg.arrows line { stroke: currentColor; stroke-width: 1.1; }
+table.kt.sv td.vm { height: 1.6em; }
 .ktab .tset { position: absolute; top: 2px; right: 0; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); opacity: 0; transition: opacity .12s; }
 .ktab:hover .tset, .ktab .tset:focus-visible { opacity: 1; }
 @media (hover: none) { .ktab .tset { opacity: .8; } }
@@ -119,9 +132,10 @@ table.kt.sv td.pt { padding-inline: 2px; min-width: 14px; }
 table.kt.sv td.iv { min-width: var(--cw, 44px); }
 table.kt.sv tr td.vm, table.kt.sv tr td.vb { border-top: none; }
 table.kt.sv td.vt { vertical-align: top; } table.kt.sv td.vb { vertical-align: bottom; }
-table.kt.sv td.vm { font-size: 1.15em; padding-block: 0; }
+table.kt.sv td.vm { padding-block: 0; }
 table.kt td.dot { background: repeating-linear-gradient(to bottom, var(--ink) 0 2px, transparent 2px 5px) center / 1px 100% no-repeat; }
-table.kt td.dot mjx-container { background: var(--panel); padding-block: 2px; }
+table.kt td.sol { background: linear-gradient(var(--ink), var(--ink)) center / 1px 100% no-repeat; }
+table.kt td.dot mjx-container, table.kt td.sol mjx-container { background: var(--panel); padding-block: 2px; }
 table.kt td.bar { padding: 4px 0; background: linear-gradient(to right, transparent calc(50% - 3px), var(--ink) calc(50% - 3px) calc(50% - 1.6px), transparent calc(50% - 1.6px) calc(50% + 1.6px), var(--ink) calc(50% + 1.6px) calc(50% + 3px), transparent calc(50% + 3px)); }
 table.kt td.bar { min-width: 64px; }
 table.kt td.bar .bv { display: flex; }
@@ -211,7 +225,7 @@ dialog::backdrop { background: rgb(10 14 22 / 0.45); }
 </style>
 
 <div id="app">
-  <header>
+  <header data-tauri-drag-region>
     <div class="brand"><b>Kalam</b><span>قلم</span></div>
     <button class="tb" id="bFile" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="lt" data-t="file"></span></button>
     <div class="sep"></div>
@@ -221,9 +235,14 @@ dialog::backdrop { background: rgb(10 14 22 / 0.45); }
     <button class="tb" id="bExport"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span class="lt" data-t="export"></span></button>
     <button class="tb" id="bCmd"><svg viewBox="0 0 24 24"><path d="M15 4h-2a3 3 0 0 0-3 3v11a3 3 0 0 1-3 3H6M7 11h8"/></svg><span class="lt" data-t="commands"></span></button>
     <input type="file" id="fOpen" accept=".klm,application/json" hidden>
-    <div class="spacer"></div>
-    <div id="doc"><span id="docName"></span><i id="docDirty" hidden></i></div>
-    <div class="spacer"></div>
+    <div class="spacer" data-tauri-drag-region></div>
+    <div id="doc" data-tauri-drag-region><span id="docName"></span><i id="docDirty" hidden></i></div>
+    <div class="spacer" data-tauri-drag-region></div>
+    <div id="winbtns" hidden>
+      <button data-win="min" aria-label="minimize"><svg viewBox="0 0 24 24"><path d="M7 12h10"/></svg></button>
+      <button data-win="max" aria-label="maximize"><svg viewBox="0 0 24 24"><rect x="7.5" y="7.5" width="9" height="9" rx="1.5"/><path d="M10 7.5V6.5a1.5 1.5 0 0 1 1.5-1.5h6A1.5 1.5 0 0 1 19 6.5v6a1.5 1.5 0 0 1-1.5 1.5h-1"/></svg></button>
+      <button data-win="close" aria-label="close"><svg viewBox="0 0 24 24"><path d="M8 8l8 8M16 8l-8 8"/></svg></button>
+    </div>
     <select id="lang" aria-label="Language"><option value="fr">Français</option><option value="ar">العربية</option><option value="en">English</option></select>
   </header>
   <main>
@@ -285,6 +304,7 @@ const KEYS = [
   ['\\pi', 'π'], ['e', 'e'], ['i', 'i'], ['\\infty', '∞'], null,
   ['+', ' + '], ['-', ' - '], ['\\times', '*'], ['\\div', '/'], ['=', ' = '], ['\\le', ' ≤ '], ['\\ge', ' ≥ '], ['\\neq', ' ≠ '], null,
   ['\\sin', 'sin()', 1], ['\\cos', 'cos()', 1], ['\\tan', 'tan()', 1], ['\\ln', 'ln()', 1], ['\\log', 'log()', 1], ['n!', '!'], null,
+  ['\\nearrow', '"↗"'], ['\\searrow', '"↘"'], ['\\|', '"||"'], null,
   ['f(x)=', 'f(x) = '], ['\\text{"…"}', '""', 1], ['\\{\\{\\square\\}\\}', '{{}}', 2], ['\\#', '# ']];
 const DEMO = { fr: __DEMO_FR__, ar: __DEMO_AR__ };
 const $ = s => document.querySelector(s);
@@ -599,6 +619,41 @@ function mathLabel(text, col) {
 }
 // a table drawn from the rows the engine sends: [{t: LaTeX, t2?, k: kind, rs?}]
 const tabEls = new Map();      // line index -> table element on screen
+// variation arrows: a line from the value before to the value after (as tkz-tab draws them)
+function varArrows(box) {
+  box.querySelector('svg.arrows')?.remove();
+  const tb = box.querySelector('table'); if (!tb.offsetWidth) return;
+  // both sides of a double bar as wide as the widest value beside it, so the bar stays in the middle
+  const groups = {};
+  tb.querySelectorAll('td.bar[data-vc] .bv span').forEach(sp => (groups[sp.closest('td').dataset.vc] ||= []).push(sp));
+  for (const sps of Object.values(groups)) {
+    sps.forEach(sp => sp.style.minWidth = '');
+    const w = Math.max(...sps.map(sp => sp.scrollWidth));
+    sps.forEach(sp => { sp.style.minWidth = w + 'px'; sp.style.flex = '1 0 auto'; });
+  }
+  const B = box.getBoundingClientRect(), NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('class', 'arrows');
+  svg.setAttribute('width', box.scrollWidth); svg.setAttribute('height', box.scrollHeight);
+  svg.innerHTML = '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1L10 5L0 9z" fill="currentColor"/></marker></defs>';
+  // the value at point c on the given side: the formula itself when there is one, else the middle of its cell
+  const value = (c, side) => {
+    for (const td of tb.querySelectorAll(`td[data-vc="${c}"]`)) {
+      const el = td.querySelector(`span[data-side="${side}"] mjx-container`) || (td.classList.contains('bar') ? null : td.querySelector('mjx-container'));
+      if (el) return el.getBoundingClientRect();
+    }
+    const mid = tb.querySelector(`td.vm[data-vc="${c}"]`); return mid && mid.getBoundingClientRect();
+  };
+  const X = x => x - B.left + box.scrollLeft, Y = y => y - B.top + box.scrollTop;
+  for (const td of tb.querySelectorAll('td[data-ar]')) {
+    const c = +td.dataset.vc, a = value(c - 1, 'r'), b = value(c + 1, 'l'); if (!a || !b) continue;
+    const ln = document.createElementNS(NS, 'line');
+    const y1 = (a.top + a.bottom) / 2, y2 = (b.top + b.bottom) / 2;
+    // leave a small gap at each end, the arrow going from just right of one value to just left of the next
+    Object.entries({ x1: X(a.right) + 4, y1: Y(y1), x2: X(b.left) - 4, y2: Y(y2) }).forEach(([k, v]) => ln.setAttribute(k, v));
+    ln.setAttribute('marker-end', 'url(#ah)'); svg.appendChild(ln);
+  }
+  box.appendChild(svg);
+}
 function tableEl(i) {
   const T = S.cells[i].table, st = T.style || {}, box = document.createElement('div');
   box.className = 'ktab'; box.dataset.line = i;
@@ -610,10 +665,11 @@ function tableEl(i) {
     const rw = tb.insertRow();
     for (const c of row) {
       const td = rw.insertCell(); td.className = c.k; if (c.rs) td.rowSpan = c.rs;
+      if (c.r === 2 && T.kind === 'var') { td.dataset.vc = c.c; if (c.ar) td.dataset.ar = c.ar; }
       if (c.k === 'lab' && st.lgt) td.style.minWidth = Math.round(st.lgt * 38) + 'px';
       if (c.k.startsWith('bar')) {
         const bv = document.createElement('div'); bv.className = 'bv';
-        for (const t of [c.t, c.t2]) { const sp = document.createElement('span'); if (t) sp.appendChild(tex(t)); bv.appendChild(sp); }
+        [c.t, c.t2].forEach((t, side) => { const sp = document.createElement('span'); sp.dataset.side = side ? 'r' : 'l'; if (t) sp.appendChild(tex(t)); bv.appendChild(sp); });
         td.appendChild(bv);
       } else if (c.t) td.appendChild(tex(c.t));
     }
@@ -621,6 +677,7 @@ function tableEl(i) {
   box.appendChild(tb);
   box.insertAdjacentHTML('beforeend', `<button class="tset" aria-label="${esc(tr('tab_props'))}" title="${esc(tr('tab_props'))}">${GEAR}</button>`);
   box.querySelector('.tset').onclick = () => tabPanel(i);
+  if (T.kind === 'var') new ResizeObserver(() => varArrows(box)).observe(box);   // drawn once laid out, again on resize
   tabEls.set(i, box);
   return box;
 }
@@ -946,7 +1003,7 @@ function tabPanel(line) {
   const d = $('#dFig'), T = S.cells[line].table, st = T.style || {};
   const num = (k, ph, min, max, step) => `<input type="number" data-k="${k}" value="${st[k] ?? ''}" placeholder="${esc(ph)}" min="${min}" max="${max}" step="${step}">`;
   const chk = (k, t, def) => `<label style="grid-column: 2 / 4"><input type="checkbox" data-k="${k}" data-def="${def}" ${(st[k] ?? def) ? 'checked' : ''}>${esc(tr(t))}</label>`;
-  const sel = (k, opts) => `<select data-k="${k}" class="btn">${opts.map(([v, t]) => `<option value="${v}" ${(st[k] || opts[0][0]) === v ? 'selected' : ''}>${esc(tr(t))}</option>`).join('')}</select>`;
+  const sel = (k, opts, cur) => `<select data-k="${k}" class="btn">${opts.map(([v, t]) => `<option value="${v}" ${(cur || st[k] || opts[0][0]) === v ? 'selected' : ''}>${esc(tr(t))}</option>`).join('')}</select>`;
   let h = `<div class="row"><h2>${esc(tr('tab_props'))}</h2><div class="spacer"></div><button class="btn" data-close>${esc(tr('close'))}</button></div><div class="fp">
     <span>${esc(tr('tab_colw'))}</span>${num('colw', tr('fig_auto'), 0.3, 15, 0.1)}<span></span>
     ${T.kind === 'grid' ? '' : `<span>${esc(tr('tab_lgt'))}</span>${num('lgt', tr('fig_auto'), 0.3, 15, 0.1)}<span></span>`}
@@ -954,7 +1011,7 @@ function tabPanel(line) {
   if (T.kind === 'grid') h += `<span>${esc(tr('tab_borders'))}</span>${sel('borders', [['all', 'tab_all'], ['outer', 'tab_outer'], ['none', 'tab_none']])}<span></span>
     <span>${esc(tr('tab_align'))}</span>${sel('align', [['center', 'tab_center'], ['left', 'tab_left'], ['right', 'tab_right']])}<span></span>
     <span></span>${chk('headrow', 'tab_headrow', false)}<span></span>${chk('headcol', 'tab_headcol', false)}`;
-  else h += (T.kind === 'sign' ? `<span></span>${chk('factors', 'tab_factors', true)}` : '') + `<span></span>${chk('dots', 'tab_dots', true)}`;
+  else h += (T.kind === 'sign' ? `<span></span>${chk('factors', 'tab_factors', true)}` : '') + `<span>${esc(tr('tab_lines'))}</span>${sel('lines', [['dots', 'tab_ldots'], ['solid', 'tab_lsolid'], ['none', 'tab_none']], st.lines || (st.dots === false ? 'none' : 'dots'))}<span></span>`;
   // the cells, as text: values as $LaTeX$, marks + - 0 || ↗ ↘; an edited cell is highlighted
   const ed = st.cells || {}, ncol = Math.max(...T.src.map(r => r.length));
   h += `</div><h3>${esc(tr('tab_cells'))}</h3>`;
@@ -966,9 +1023,18 @@ function tabPanel(line) {
     }
     h += '</div></div>';
   });
-  h += `<div class="note">${esc(tr('tab_cells_hint'))}</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
+  h += `<div class="csyms">${['↗', '↘', '→', '||', '+', '-', '0', '$+\\infty$', '$-\\infty$'].map(t => `<button class="btn" data-sym="${esc(t)}" title="${esc(t)}">${esc(t.replace('$+\\infty$', '+∞').replace('$-\\infty$', '−∞'))}</button>`).join('')}</div>
+    <div class="note">${esc(tr('tab_cells_hint'))}</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
   $('#figBody').innerHTML = h;
   $('#figReset').onclick = () => { setFigStyle({}); tabPanel(line); };
+  // the symbol buttons write into the cell last focused (↗ ↘ are hard to type on most keyboards)
+  let lastCell = null;
+  $('#figBody').addEventListener('focusin', e => { if (e.target.dataset.cell) lastCell = e.target; });
+  $('#figBody').querySelector('.csyms').onmousedown = e => e.preventDefault();
+  $('#figBody').querySelector('.csyms').onclick = e => {
+    const b = e.target.closest('[data-sym]'); if (!b || !lastCell) return;
+    lastCell.value = b.dataset.sym; lastCell.dispatchEvent(new Event('input', { bubbles: true })); lastCell.focus();
+  };
   if (!d.open) d.show();
 }
 function readTabPanel() {
@@ -1073,16 +1139,27 @@ const ICON = { new: 'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM
   open: 'M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
   save: 'M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 3v5h7V3M8 21v-7h8v7',
   saveas: 'M5 3h11l3 3v6M8 3v5h7V3M8 21H7a2 2 0 0 1-2-2V3M14 21l7-7-2-2-7 7v2z',
-  export: 'M12 3v12M7 10l5 5 5-5M5 21h14', cmd: 'M15 4h-2a3 3 0 0 0-3 3v11a3 3 0 0 1-3 3H6M7 11h8' };
+  export: 'M12 3v12M7 10l5 5 5-5M5 21h14', nums: 'M5 6h1v5M5 11h2M4.5 15.5a1.5 1.5 0 1 1 2.6 1L4.5 19.5h3M11 7h9M11 12h9M11 17h9', cmd: 'M15 4h-2a3 3 0 0 0-3 3v11a3 3 0 0 1-3 3H6M7 11h8' };
 const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 const askNew = () => doc.dirty ? confirmBox(tr('confirm_new'), newDoc) : newDoc();
 $('#bFile').onclick = e => {
   if (e.currentTarget.getAttribute('aria-expanded')) return closeMenu();
   popMenu(e.currentTarget, [['new', askNew, MOD + 'N', ICON.new], ['open', openDoc, MOD + 'O', ICON.open], '-',
     ['save', () => saveDoc(false), MOD + 'S', ICON.save], ['save_as', () => saveDoc(true), MOD + '⇧S', ICON.saveas], '-',
-    ['export_dots', openExport, MOD + 'E', ICON.export], ['cmd_editor', openCmd, '', ICON.cmd]], true);
+    ['export_dots', openExport, MOD + 'E', ICON.export], ['cmd_editor', openCmd, '', ICON.cmd], '-',
+    [document.body.classList.contains('nonum') ? 'show_nums' : 'hide_nums', () => showNums(document.body.classList.contains('nonum')), '', ICON.nums]], true);
 };
 $('#bNew').onclick = askNew;
+// desktop app: our own minimize / maximize / close (the window has no system title bar)
+if (window.__TAURI__ && window.__TAURI__.window && !/Android|iPhone|iPad/.test(navigator.userAgent)) {
+  const w = __TAURI__.window.getCurrentWindow();
+  $('#winbtns').hidden = false;
+  $('#winbtns').onclick = e => { const b = e.target.closest('[data-win]'); if (!b) return;
+    ({ min: () => w.minimize(), max: () => w.toggleMaximize(), close: () => w.close() })[b.dataset.win]().catch(err => toast(String(err))); };
+}
+// cell numbers can be hidden (remembered in this browser / app)
+function showNums(on) { document.body.classList.toggle('nonum', !on); store.set('kalam.nums', on ? '1' : '0'); }
+showNums(store.get('kalam.nums') !== '0');
 $('#bOpen').onclick = openDoc;
 $('#bSave').onclick = () => saveDoc(false);
 document.addEventListener('keydown', e => {

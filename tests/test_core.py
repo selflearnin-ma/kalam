@@ -155,6 +155,10 @@ def test_table_by_rows():
     web.set_style(2, json.dumps({'cells': {'2,3': '$-4$ (min)', '2,2': '↗'}}))
     tex = web.export_text('tex', 'fr')
     assert '\\tkzTabVar{-/ $+\\infty$, +/ $-4\\text{ (min)}$, +/ $+\\infty$}' in tex and "\\tkzTabLine{, -, t, -, }" in tex
+    web.set_style(2, json.dumps({'lines': 'solid', 'cells': {'2,4': '↘'}}))
+    assert 't style/.style={style=solid}' in web.export_text('tex', 'fr')
+    arrows = [c['ar'] for c in json.loads(web.state())['lines'][2]['table']['rows'][3] if 'ar' in c]
+    assert arrows == ['-', '-']             # x^2-4x with its ↗ edited to ↘: two arrows down
     web.set_cell(0, 'TableauSignes((x - 1)/(x + 2))')
     web.set_style(0, json.dumps({'factors': False, 'dots': False}))
     assert len(json.loads(web.state())['lines'][0]['table']['rows']) == 2
