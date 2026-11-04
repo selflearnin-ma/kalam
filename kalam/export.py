@@ -155,9 +155,7 @@ def to_latex(session, lang='fr'):
         elif c.shows_figure:
             body.append('% 3D figure: not exported')
         elif c.shows_table:
-            v = c.value
-            tab = v.tabular(c.style) if isinstance(v, runtime.TableObj) else v.tkztab(c.style)
-            body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(tab))
+            body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(c.value.latex(c.style)))
         elif c.error:
             body.append('\\[\\text{\\textcolor{red}{%s}}\\]' % _tex_text(c.error))
         elif c.latex:
@@ -284,7 +282,7 @@ def tikz_picture(items, labels, window, style=None):
                               for k, w in zip(('xmin', 'xmax', 'ymin', 'ymax'), window)]
     xmin, xmax, ymin, ymax = math.floor(xmin), math.ceil(xmax), math.floor(ymin), math.ceil(ymax)
     opt = ['']
-    defs, draws, fcts, pts, named, skipped = [], [], [], [], [], []
+    defs, draws, fcts, pts, named, skipped, relabel = [], [], [], [], [], [], []
     aux = [0]
     known = {}      # (x, y) -> point name, so lines reuse A, B instead of new points
 
@@ -311,7 +309,10 @@ def tikz_picture(items, labels, window, style=None):
             n = P(v, name if name and name.isidentifier() and name.isascii() else None)
             pts.append((n, opt[0]))
             if n == name and st_o[0].get('label', True):
-                named.append(n)
+                if st_o[0].get('text'):            # label text chosen in the options
+                    relabel.append((n, st_o[0]['text']))
+                else:
+                    named.append(n)
         elif isinstance(v, sp.Segment2D):
             draws.append('\\tkzDrawSegment%s(%s,%s)' % (opt[0], P(v.p1), P(v.p2)))
         elif isinstance(v, sp.Ray2D):
@@ -354,6 +355,8 @@ def tikz_picture(items, labels, window, style=None):
         out.append('\\tkzDrawPoints%s(%s)' % (o, ','.join(n for n, oo in pts if oo == o)))
     if named:
         out.append('\\tkzLabelPoints[above right](%s)' % ','.join(named))
+    for n, t in relabel:
+        out.append('\\tkzLabelPoint[above right](%s){%s}' % (n, t if '$' in t else '$%s$' % t))
     if skipped:
         out.append('% not exported (implicit curves, regions...): ' + ', '.join(skipped))
     return out + ['\\end{tikzpicture}']

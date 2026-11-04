@@ -5,6 +5,7 @@ into exported scripts, so an exported notebook runs with nothing but SymPy.
 Inside, always use `sp.X` (never bare names) because commands such as
 `Integral` or `Matrix` shadow SymPy's own names in the exported namespace.
 """
+import copy
 import sympy as sp
 from sympy.geometry.entity import GeometryEntity
 
@@ -530,242 +531,17 @@ def _tex_x(p):
     return {sp.oo: '+\\infty', -sp.oo: '-\\infty'}.get(p, sp.latex(p))
 
 
-class SignTableObj:
-    """Sign table of an expression: one row per factor (when there are several) and the expression."""
-    def __init__(self, e, v):
-        _numeric(e, v)
-        self.var = v
-        pts, self.dom, excluded = _table_points(e, v)
-        num, den = sp.fraction(sp.factor(sp.together(e)))
-        facs = [(f ** k, False) for f, k in sp.factor_list(num)[1] if f.has(v)] + \
-               [(f ** k, True) for f, k in sp.factor_list(den)[1] if f.has(v)]
-        zeros = set()
-        for f, _ in facs:
-            zeros |= _roots(f, v, sp.Interval(pts[0], pts[-1]))
-        self.xs = sorted(set(pts) | zeros, key=lambda b: float(b))
-        rows = [(f, is_den) for f, is_den in facs] if len(facs) > 1 else []
-        self.rows = [(sp.latex(f), self._cells(f, is_den, excluded)) for f, is_den in rows]
-        self.rows.append((sp.latex(e), self._cells(e, None, excluded)))
-
-    def _cells(self, f, is_den, excluded):
-        v, xs, out = self.var, self.xs, []
-        for k, p in enumerate(xs):
-            if k:
-                out.append(_sign(f, v, _test_point(xs[k - 1], p)))
-            if not p.is_finite:
-                out.append('')
-                continue
-            if is_den is None:   # the expression itself: || where it is not defined, 0 at its zeros
-                out.append('d' if p in excluded or p not in self.dom else 'z' if sp.simplify(f.subs(v, p)) == 0 else '')
-            else:
-                out.append('z' if sp.simplify(f.subs(v, p)) == 0 else '')     # a factor: 0 at its zeros
-        return out
-
-    def _latex(self, printer=None):
-        n = len(self.xs)
-        head = ' & '.join(_tex_x(p) if k % 2 == 0 else '' for k, p in enumerate(_spread(self.xs)))
-        mark = {'+': '+', '-': '-', 'z': '0', 'd': '\\|', '': '', '0': '0'}
-        lines = ['%s & %s' % (sp.latex(self.var), head)]
-        lines += ['%s & %s' % (lab, ' & '.join(mark[c] for c in cells)) for lab, cells in self.rows]
-        return '\\begin{array}{|c|%s|}\\hline %s \\\\ \\hline\\end{array}' % ('c' * (2 * n - 1), ' \\\\ \\hline '.join(lines))
-
-    def shown_rows(self, style=None):
-        return self.rows if (style or {}).get('factors', True) else self.rows[-1:]
-
-    def tkztab(self, style=None):
-        st = style or {}
-        rows = self.shown_rows(st)
-        code = {'+': '+', '-': '-', 'z': 'z', 'd': 'd', '': '', '0': 'z'}
-        out = ['\\begin{tikzpicture}',
-               '\\tkzTabInit[%s]{$%s$/1, %s}{%s}' % (_tab_opts(st), sp.latex(self.var), ', '.join('$%s$/1' % lab for lab, _ in rows),
-                                                   ', '.join('$%s$' % _tex_x(p) for p in self.xs))]
-        out += ['\\tkzTabLine{%s}' % ', '.join(_tab_line(cells, code, st)) for _, cells in rows]
-        return out + ['\\end{tikzpicture}']
-
-    def grid(self, style=None):
-        """Rows of cells for the screen: {'t': LaTeX, 'k': kind} (lab, head, pt, iv, bar, dot)."""
-        st = style or {}
-        out = [[{'t': sp.latex(self.var), 'k': 'lab'}] + [{'t': _tex_x(p) if p is not None else '', 'k': 'head'} for p in _spread(self.xs)]]
-        for lab, cells in self.shown_rows(st):
-            out.append([{'t': lab, 'k': 'lab'}] + [_grid_cell(c, k, len(cells), st) for k, c in enumerate(cells)])
-        return out
-
-    def __str__(self):
-        return '\n'.join('%-12s %s' % (lab, ' '.join(c or '.' for c in cells)) for lab, cells in
-                         [(str(self.var), [str(p) if k % 2 == 0 else '' for k, p in enumerate(_spread(self.xs))])] + self.rows)
-
-
-def _tab_line(cells, code, style=None):
-    """tkz-tab codes of a row; an interior point with no mark gets a dotted line (t) unless style dots is off."""
-    dots = (style or {}).get('dots', True)
-    return [code[c] or ('t' if dots and 0 < k < len(cells) - 1 and k % 2 == 0 else '') for k, c in enumerate(cells)]
-
-
-def _tab_opts(style):
-    """tkzTabInit options: espcl (space between two x values) and lgt (first column), in cm."""
-    st = style or {}
-    num = lambda k, d: float(st[k]) if isinstance(st.get(k), (int, float)) and 0.3 <= st[k] <= 15 else d
-    return 'espcl=%s,lgt=%s' % (_fmt_cm(num('colw', 2)), _fmt_cm(num('lgt', 2)))
-
-
-def _fmt_cm(v):
-    return ('%.2f' % v).rstrip('0').rstrip('.')
-
-
-def _grid_cell(c, k, n, style):
-    """Screen cell of a sign row: interval sign, or a point mark (0, forbidden value, dotted line)."""
-    if k % 2:
-        return {'t': {'+': '+', '-': '-', '0': '0'}.get(c, c), 'k': 'iv'}
-    if c == 'd':
-        return {'t': '', 'k': 'bar'}
-    dot = ' dot' if (style or {}).get('dots', True) and 0 < k < n - 1 else ''
-    return {'t': '0' if c in ('z', '0') else '', 'k': 'pt' + dot}
-
-
-def _spread(xs):
-    """x0, gap, x1, gap, ... (the columns of a table)."""
-    out = []
-    for k, p in enumerate(xs):
-        if k:
-            out.append(None)
-        out.append(p)
-    return out
-
-
-class VariationTableObj:
-    """Variation table of f: sign of f' and the arrows of f, with values and limits."""
-    def __init__(self, f):
-        e, v = _body(f)
-        _numeric(e, v)
-        self.var, self.name, self.f = v, 'f', f      # the notebook sets name to the function's own name
-        pts, dom, excluded = _table_points(e, v)
-        d = sp.simplify(sp.diff(e, v))
-        crit = _roots(d, v, sp.Interval.open(pts[0], pts[-1]) - sp.FiniteSet(*excluded))
-        self.xs = xs = sorted(set(pts) | crit, key=lambda b: float(b))
-        self.dsign = [_sign(d, v, _test_point(xs[k], xs[k + 1])) for k in range(len(xs) - 1)]
-        self.fp = []      # f'(x) row: point marks and interval signs
-        self.vals = []    # per point: (kind, left value, right value); kind 'v' value, 'D' forbidden, 'Ds'/'sD' at ends
-        for k, p in enumerate(xs):
-            if k:
-                self.fp.append(self.dsign[k - 1])
-            if p in excluded or not p.is_finite or p not in dom:
-                lv = sp.limit(e, v, p, '-') if k > 0 else None
-                rv = sp.limit(e, v, p, '+') if k < len(xs) - 1 else None
-                if not p.is_finite:
-                    self.fp.append('')
-                    self.vals.append(('v', lv if k else rv, None))
-                else:
-                    self.fp.append('d')
-                    self.vals.append(('D', lv, rv))
-            else:
-                dv = d.subs(v, p)
-                self.fp.append('d' if not dv.is_finite else 'z' if p in crit and sp.simplify(dv) == 0 else '')
-                self.vals.append(('v', sp.simplify(e.subs(v, p)), None))
-
-    def _pos(self, k, side):
-        """'+' (top) or '-' (bottom) for the value at point k on its left ('l') or right ('r') side."""
-        n = len(self.xs)
-        if side == 'l' and k > 0:
-            return '+' if self.dsign[k - 1] == '+' else '-'
-        if side == 'r' and k < n - 1:
-            return '-' if self.dsign[k] == '+' else '+'
-        return '+'
-
-    def _point_pos(self, k):
-        if k == 0:
-            return self._pos(0, 'r')
-        return self._pos(k, 'l')
-
-    def _latex(self, printer=None):
-        cols = 2 * len(self.xs) - 1
-        top, mid, bot = [''] * cols, [''] * cols, [''] * cols
-        for k, (kind, a, b) in enumerate(self.vals):
-            c = 2 * k
-            if kind == 'D':
-                mid[c] = '\\|'
-                left = _tex_x(a) + '\\,' if a is not None else ''
-                right = '\\,' + _tex_x(b) if b is not None else ''
-                for row, s in ((top, '+'), (bot, '-')):
-                    row[c] = (left if a is not None and self._pos(k, 'l') == s else '') + '\\|' + \
-                             (right if b is not None and self._pos(k, 'r') == s else '')
-            else:
-                (top if self._point_pos(k) == '+' else bot)[c] = _tex_x(a)
-        for k, s in enumerate(self.dsign):
-            mid[2 * k + 1] = '\\nearrow' if s == '+' else '\\searrow' if s == '-' else '\\rightarrow'
-        mark = {'+': '+', '-': '-', 'z': '0', 'd': '\\|', '': ''}
-        head = ' & '.join(_tex_x(p) if p is not None else '' for p in _spread(self.xs))
-        lines = ['%s & %s' % (sp.latex(self.var), head),
-                 "%s'(%s) & %s" % (self.name, sp.latex(self.var), ' & '.join(mark[c] for c in self.fp)),
-                 ' & ' + ' & '.join(top) + ' \\\\ %s(%s) & ' % (self.name, sp.latex(self.var)) + ' & '.join(mid) +
-                 ' \\\\ & ' + ' & '.join(bot)]
-        return '\\begin{array}{|c|%s|}\\hline %s \\\\ \\hline\\end{array}' % ('c' * cols, ' \\\\ \\hline '.join(lines))
-
-    def grid(self, style=None):
-        st, n = style or {}, 2 * len(self.xs) - 1
-        top, mid, bot = [''] * n, [''] * n, [''] * n
-        for k, (kind, a, b) in enumerate(self.vals):
-            c = 2 * k
-            if kind == 'D':
-                for row, s in ((top, '+'), (bot, '-')):        # left | right of the forbidden value
-                    row[c] = ((_tex_x(a) if a is not None and self._pos(k, 'l') == s else ''),
-                              (_tex_x(b) if b is not None and self._pos(k, 'r') == s else ''))
-            else:
-                (top if self._point_pos(k) == '+' else bot)[c] = _tex_x(a)
-        for k, s in enumerate(self.dsign):
-            mid[2 * k + 1] = '\\nearrow' if s == '+' else '\\searrow' if s == '-' else '\\rightarrow'
-        bars = {2 * k for k, (kind, _, _) in enumerate(self.vals) if kind == 'D'}
-        v = sp.latex(self.var)
-        out = [[{'t': v, 'k': 'lab'}] + [{'t': _tex_x(p) if p is not None else '', 'k': 'head'} for p in _spread(self.xs)],
-               [{'t': "%s'(%s)" % (self.name, v), 'k': 'lab'}] + [_grid_cell(c, k, n, st) for k, c in enumerate(self.fp)]]
-        for r, row in enumerate((top, mid, bot)):
-            lab = [{'t': '%s(%s)' % (self.name, v), 'k': 'lab', 'rs': 3}] if r == 0 else []
-            vk = ' vt' if r == 0 else ' vm' if r == 1 else ' vb'
-            out.append(lab + [dict(t=t[0], t2=t[1], k='bar' + vk) if isinstance(t, tuple) else
-                              {'t': t, 'k': ('bar' if k in bars else 'iv' if k % 2 else 'pt') + vk} for k, t in enumerate(row)])
-        return out
-
-    def tkztab(self, style=None):
-        st = style or {}
-        v, xs = sp.latex(self.var), self.xs
-        code = {'+': '+', '-': '-', 'z': 'z', 'd': 'd', '': ''}
-        var = []
-        for k, (kind, a, b) in enumerate(self.vals):
-            if kind == 'D':
-                if a is None:
-                    var.append('D%s/ / $%s$' % (self._pos(k, 'r'), _tex_x(b)))
-                elif b is None:
-                    var.append('%sD/ $%s$ /' % (self._pos(k, 'l'), _tex_x(a)))
-                else:
-                    var.append('%sD%s/ $%s$ / $%s$' % (self._pos(k, 'l'), self._pos(k, 'r'), _tex_x(a), _tex_x(b)))
-            else:
-                var.append('%s/ $%s$' % (self._point_pos(k), _tex_x(a)))
-        return ['\\begin{tikzpicture}',
-                "\\tkzTabInit[%s]{$%s$/1, $%s'(%s)$/1, $%s(%s)$/2}{%s}" % (
-                    _tab_opts(st), v, self.name, v, self.name, v, ', '.join('$%s$' % _tex_x(p) for p in xs)),
-                '\\tkzTabLine{%s}' % ', '.join(_tab_line(self.fp, code, st)),
-                '\\tkzTabVar{%s}' % ', '.join(var),
-                '\\end{tikzpicture}']
-
-    def __str__(self):
-        return "x: %s\n%s': %s\n%s: %s" % (' '.join(map(str, self.xs)), self.name, ' '.join(c or '.' for c in self.fp),
-                                           self.name, ' '.join(str(a) for _, a, _ in self.vals))
-
-
-def SignTable(f, var=None):
-    """SignTable(x^2 - 4): sign table (one row per factor, then the expression)."""
-    e, v = _body(f)
-    return SignTableObj(e, var or v)
-
-
-def VariationTable(f):
-    """VariationTable(f): sign of f' and variations of f, with values and limits."""
-    return VariationTableObj(f)
-
-
-# ---------------------------------------------------------------- tables built row by row
+# A table is rows of cells (TableObj). Sign and variation tables are tables whose rows the CAS fills in:
+#   row 0: the variable, then x0, '', x1, '', ... (points and the intervals between them)
+#   sign rows: a label, then '+', '-', '0', '||' (forbidden value) or '' in the same columns
+#   the f(x) row of a variation table: values at points ((left, right) at a forbidden value), arrows between
+# Cells can be edited from the table's options (style['cells'] = {"row,col": text}); the shown and exported
+# table follows the edited cells, arrows included.
 _MARKS = {'+': '+', '-': '-', '0': '0', '||': '\\|', '|': '|', '/': '\\nearrow', '\\': '\\searrow',
-          '↗': '\\nearrow', '↘': '\\searrow', '->': '\\rightarrow', '': '',
+          '↗': '\\nearrow', '↘': '\\searrow', '->': '\\rightarrow', '→': '\\rightarrow', '': '',
           'oo': '+\\infty', '+oo': '+\\infty', '-oo': '-\\infty'}     # ∞ in a text was already written oo
+_TKZ = {'+': '+', '-': '-', '0': 'z', 'z': 'z', '||': 'd', 'd': 'd', '': ''}
+_UP, _DOWN = ('↗', '/'), ('↘', '\\')
 
 
 def cell_tex(v):
@@ -782,16 +558,53 @@ def cell_tex(v):
     return _tex_x(v) if isinstance(v, sp.Basic) else sp.latex(v)
 
 
+def cell_src(v):
+    """The text of a cell as it is edited in the options: marks as they are, values as $LaTeX$."""
+    if v is None:
+        return ''
+    if isinstance(v, tuple):
+        return ' || '.join(cell_src(p) for p in v)
+    if isinstance(v, str):
+        return v
+    return '$%s$' % cell_tex(v)
+
+
+def _tkz(v):
+    """A cell in tkz-tab: a sign code, or $LaTeX$."""
+    if isinstance(v, str) and v.strip() in _TKZ:
+        return _TKZ[v.strip()]
+    t = cell_tex(v)
+    return '$%s$' % t if t else ''
+
+
 class TableObj:
     """A table of `ncols` columns: T = Table(3, 2) then T.Row(a, b, c) fills the next row."""
+    kind = 'grid'
+
     def __init__(self, ncols, rows):
         self.ncols, self.rows = ncols, rows
 
     def _latex(self, printer=None):
         return r'\text{[table]}'
 
+    def cells(self, style=None):
+        """The rows with the edits of the options applied (an edited "a || b" splits a forbidden-value cell)."""
+        rows = [list(r) for r in self.rows]
+        for key, txt in ((style or {}).get('cells') or {}).items():
+            try:
+                r, c = map(int, key.split(','))
+            except ValueError:
+                continue
+            if 0 <= r < len(rows) and 0 <= c < len(rows[r]):
+                rows[r][c] = tuple(t.strip() for t in txt.split('||', 1)) if isinstance(rows[r][c], tuple) else txt
+        return rows
+
+    def sources(self):
+        """Text of every cell, for the editor of the options."""
+        return [[cell_src(c) for c in r] for r in self.rows]
+
     def grid(self, style=None):
-        return [[{'t': cell_tex(c), 'k': 'g'} for c in r] for r in self.rows]
+        return [[{'t': cell_tex(c), 'k': 'g'} for c in r] for r in self.cells(style)]
 
     def tabular(self, style=None):
         """The table as a LaTeX tabular (math cells), following its options."""
@@ -802,19 +615,239 @@ class TableObj:
         col = '>{%s\\arraybackslash}p{%scm}' % ({'l': '\\raggedright', 'r': '\\raggedleft'}.get(al, '\\centering'), _fmt_cm(w)) if w else al
         sep = '|' if b == 'all' else ''
         spec = ('|' if b != 'none' else '') + sep.join([col] * self.ncols) + ('|' if b != 'none' else '')
+        rows = self.cells(st)
         out = ['\\begin{tabular}{%s}' % spec] + (['\\hline'] if b != 'none' else [])
-        for k, r in enumerate(self.rows):
+        for k, r in enumerate(rows):
             cells = [('$%s$' % cell_tex(c)) if cell_tex(c) else '' for c in r]
             if st.get('headcol') and cells:
                 cells[0] = '\\cellcolor{gray!15}' + cells[0]
             line = ('\\rowcolor{gray!15}' if st.get('headrow') and k == 0 else '') + ' & '.join(cells) + ' \\\\'
-            if b == 'all' or (b == 'outer' and (k == len(self.rows) - 1 or (k == 0 and st.get('headrow')))):
+            if b == 'all' or (b == 'outer' and (k == len(rows) - 1 or (k == 0 and st.get('headrow')))):
                 line += ' \\hline'
             out.append(line)
         return out + ['\\end{tabular}']
 
+    def latex(self, style=None):
+        """The table in a LaTeX document (tabular, or tkz-tab for sign and variation tables)."""
+        return self.tabular(style)
+
     def __str__(self):
-        return '\n'.join(' | '.join('' if c is None else str(c) for c in r) for r in self.rows)
+        return '\n'.join(' | '.join(cell_src(c) for c in r) for r in self.rows)
+
+
+class _XTable(TableObj):
+    """Common part of sign and variation tables: row 0 holds the points, sign rows hold marks."""
+    def _point(self, c):
+        return c % 2 == 1          # column 0 is the label; then x0, gap, x1, ...
+
+    def _sign_cells(self, row, r, st, head=False):
+        n = len(row)
+        out = [{'t': cell_tex(row[0]), 'k': 'lab', 'r': r, 'c': 0}]
+        for c in range(1, n):
+            v = row[c]
+            if head:
+                k = 'head'
+            elif not self._point(c):
+                k = 'iv'
+            elif isinstance(v, str) and v.strip() == '||':
+                k, v = 'bar', ''
+            else:
+                k = 'pt' + (' dot' if st.get('dots', True) and 1 < c < n - 1 else '')
+            out.append({'t': cell_tex(v), 'k': k, 'r': r, 'c': c})
+        return out
+
+    def _tab_line(self, row, st):
+        dots = st.get('dots', True)
+        return [_tkz(v) or ('t' if dots and self._point(c) and 1 < c < len(row) - 1 else '') for c, v in enumerate(row) if c]
+
+    def _tab_init(self, st, labels):
+        xs = self.cells(st)[0]
+        return '\\tkzTabInit[%s]{%s}{%s}' % (_tab_opts(st), ', '.join(labels),
+                                             ', '.join(_tkz(v) for c, v in enumerate(xs) if c and self._point(c)))
+
+    def latex(self, style=None):
+        return self.tkztab(style)
+
+
+class SignTableObj(_XTable):
+    """Sign table of an expression: one row per factor (when there are several), then the expression."""
+    kind = 'sign'
+
+    def __init__(self, e, v):
+        _numeric(e, v)
+        self.var = v
+        pts, dom, excluded = _table_points(e, v)
+        num, den = sp.fraction(sp.factor(sp.together(e)))
+        facs = [f ** k for f, k in sp.factor_list(num)[1] if f.has(v)] + [f ** k for f, k in sp.factor_list(den)[1] if f.has(v)]
+        zeros = set()
+        for f in facs:
+            zeros |= _roots(f, v, sp.Interval(pts[0], pts[-1]))
+        self.xs = xs = sorted(set(pts) | zeros, key=lambda b: float(b))
+        rows = [[v] + [p if p is not None else '' for p in _spread(xs)]]
+        for f in (facs if len(facs) > 1 else []):
+            rows.append([f] + self._marks(f, xs, lambda p: '0' if sp.simplify(f.subs(v, p)) == 0 else ''))
+        rows.append([e] + self._marks(e, xs, lambda p: '||' if p in excluded or p not in dom
+                                      else '0' if sp.simplify(e.subs(v, p)) == 0 else ''))
+        self.nfac = len(rows) - 2           # factor rows: 1 .. nfac
+        super().__init__(len(rows[0]), rows)
+
+    def _marks(self, f, xs, at_point):
+        out = []
+        for k, p in enumerate(xs):
+            if k:
+                out.append(_sign(f, self.var, _test_point(xs[k - 1], p)))
+            out.append(at_point(p) if p.is_finite else '')
+        return out
+
+    def _shown(self, st):
+        rows = list(enumerate(self.cells(st)))
+        return rows if st.get('factors', True) else [rc for rc in rows if not 1 <= rc[0] <= self.nfac]
+
+    def grid(self, style=None):
+        st = style or {}
+        return [self._sign_cells(row, r, st, head=r == 0) for r, row in self._shown(st)]
+
+    def tkztab(self, style=None):
+        st = style or {}
+        shown = self._shown(st)
+        out = ['\\begin{tikzpicture}', self._tab_init(st, ['%s/1' % _tkz(row[0]) for _, row in shown])]
+        out += ['\\tkzTabLine{%s}' % ', '.join(self._tab_line(row, st)) for r, row in shown if r]
+        return out + ['\\end{tikzpicture}']
+
+
+class VariationTableObj(_XTable):
+    """Variation table of f: sign of f', and f with arrows, values and limits."""
+    kind = 'var'
+
+    def __init__(self, f):
+        e, v = _body(f)
+        _numeric(e, v)
+        self.var, self.f = v, f
+        pts, dom, excluded = _table_points(e, v)
+        d = sp.simplify(sp.diff(e, v))
+        crit = _roots(d, v, sp.Interval.open(pts[0], pts[-1]) - sp.FiniteSet(*excluded))
+        self.xs = xs = sorted(set(pts) | crit, key=lambda b: float(b))
+        fp, fv = [], []
+        for k, p in enumerate(xs):
+            if k:
+                s = _sign(d, v, _test_point(xs[k - 1], p))
+                fp.append(s)
+                fv.append('↗' if s == '+' else '↘' if s == '-' else '→')
+            if not p.is_finite:
+                fp.append('')
+                fv.append(sp.limit(e, v, p, '-' if k else '+'))
+            elif p in excluded or p not in dom:       # forbidden value (or open end): limits on each side
+                fp.append('||')
+                fv.append((sp.limit(e, v, p, '-') if k > 0 else None, sp.limit(e, v, p, '+') if k < len(xs) - 1 else None))
+            else:
+                dv = d.subs(v, p)
+                fp.append('||' if not dv.is_finite else '0' if p in crit and sp.simplify(dv) == 0 else '')
+                fv.append(sp.simplify(e.subs(v, p)))
+        super().__init__(2 * len(xs), [[v] + [p if p is not None else '' for p in _spread(xs)], [None] + fp, [None] + fv])
+        self.rename('f')
+
+    def rename(self, name):
+        """Labels f'(x) and f(x) with the function's own name (set by the notebook)."""
+        self.name = name
+        v = sp.latex(self.var)
+        self.rows[1][0], self.rows[2][0] = "$%s'(%s)$" % (name, v), '$%s(%s)$' % (name, v)
+
+    @staticmethod
+    def _dir(a):
+        return '+' if a in _UP else '-' if a in _DOWN else '0'
+
+    def _places(self, fv):
+        """Per point column: (left place, right place), '+' top or '-' bottom, from the arrows around it."""
+        n, out = len(fv), {}
+        for c in range(1, n, 2):
+            left = self._dir(fv[c - 1]) if c > 1 else None
+            right = self._dir(fv[c + 1]) if c + 1 < n else None
+            lp = '+' if left == '+' else '-' if left else None
+            rp = '-' if right == '+' else '+' if right else None
+            out[c] = (lp or rp or '+', rp or lp or '+')
+        return out
+
+    def grid(self, style=None):
+        st = style or {}
+        rows = self.cells(st)
+        fv = [str(a).strip() if isinstance(a, str) else a for a in rows[2]]
+        places = self._places(fv)
+        out = [self._sign_cells(rows[0], 0, st, head=True), self._sign_cells(rows[1], 1, st)]
+        sub = {'+': [], '0': [], '-': []}
+        for c in range(1, len(fv)):
+            v = fv[c]
+            for lvl, k in (('+', ' vt'), ('0', ' vm'), ('-', ' vb')):
+                cell = {'k': ('pt' if self._point(c) else 'iv') + k, 'r': 2, 'c': c, 't': ''}
+                if isinstance(v, tuple):          # forbidden value: double bar, left and right values
+                    lp, rp = places[c]
+                    cell.update(k='bar' + k, t=cell_tex(v[0]) if lp == lvl and v[0] is not None else '',
+                                t2=cell_tex(v[1]) if rp == lvl and len(v) > 1 and v[1] is not None else '')
+                elif self._point(c):
+                    if places[c][0 if c > 1 else 1] == lvl:
+                        cell['t'] = cell_tex(v)
+                elif lvl == '0':
+                    cell['t'] = cell_tex(v)
+                sub[lvl].append(cell)
+        lab = {'t': cell_tex(rows[2][0]), 'k': 'lab', 'rs': 3, 'r': 2, 'c': 0}
+        out += [[lab] + sub['+'], sub['0'], sub['-']]
+        out += [self._sign_cells(row, r, st) for r, row in enumerate(rows) if r > 2]
+        return out
+
+    def tkztab(self, style=None):
+        st = style or {}
+        rows = self.cells(st)
+        fv = [str(a).strip() if isinstance(a, str) else a for a in rows[2]]
+        places, var = self._places(fv), []
+        for c in range(1, len(fv), 2):
+            v, (lp, rp) = fv[c], places[c]
+            if isinstance(v, tuple):
+                a, b = v[0], v[1] if len(v) > 1 else None
+                if a is None or a == '':
+                    var.append('D%s/ / %s' % (rp, _tkz(b)))
+                elif b is None or b == '':
+                    var.append('%sD/ %s /' % (lp, _tkz(a)))
+                else:
+                    var.append('%sD%s/ %s / %s' % (lp, rp, _tkz(a), _tkz(b)))
+            else:
+                var.append('%s/ %s' % (lp if c > 1 else rp, _tkz(v)))
+        labels = ['%s/1' % _tkz(rows[0][0]), '%s/1' % _tkz(rows[1][0]), '%s/2' % _tkz(rows[2][0])] + \
+                 ['%s/1' % _tkz(r[0]) for r in rows[3:]]
+        out = ['\\begin{tikzpicture}', self._tab_init(st, labels),
+               '\\tkzTabLine{%s}' % ', '.join(self._tab_line(rows[1], st)), '\\tkzTabVar{%s}' % ', '.join(var)]
+        out += ['\\tkzTabLine{%s}' % ', '.join(self._tab_line(r, st)) for r in rows[3:]]
+        return out + ['\\end{tikzpicture}']
+
+
+def _tab_opts(style):
+    """tkzTabInit options: espcl (space between two x values) and lgt (first column), in cm."""
+    st = style or {}
+    num = lambda k, d: float(st[k]) if isinstance(st.get(k), (int, float)) and 0.3 <= st[k] <= 15 else d
+    return 'espcl=%s,lgt=%s' % (_fmt_cm(num('colw', 2)), _fmt_cm(num('lgt', 2)))
+
+
+def _fmt_cm(v):
+    return ('%.2f' % v).rstrip('0').rstrip('.')
+
+
+def _spread(xs):
+    """x0, gap, x1, gap, ... (the columns of a table)."""
+    out = []
+    for k, p in enumerate(xs):
+        if k:
+            out.append(None)
+        out.append(p)
+    return out
+
+
+def SignTable(f, var=None):
+    """SignTable(x^2 - 4): sign table (one row per factor, then the expression)."""
+    e, v = _body(f)
+    return SignTableObj(e, var or v)
+
+
+def VariationTable(f):
+    """VariationTable(f): sign of f' and variations of f, with values and limits."""
+    return VariationTableObj(f)
 
 
 def Table(columns, rows=0):
@@ -826,19 +859,21 @@ def Table(columns, rows=0):
 
 
 def Row(table, *cells):
-    """Row(T, a, b, ...) — written T.Row(a, b, ...): fills the first empty row of T, or adds one."""
+    """Row(T, a, b, ...) — written T.Row(a, b, ...): fills the first empty row of T, or adds one.
+    On a sign or variation table it adds a sign row: a label, then marks under the points and intervals."""
     if not isinstance(table, TableObj):
         raise ValueError('Row(...) adds a row to a table: T = Table(3) then T.Row(a, b, c)')
     if len(cells) > table.ncols:
         raise ValueError('this table has %d columns, not %d' % (table.ncols, len(cells)))
-    row = list(cells) + [None] * (table.ncols - len(cells))
-    rows = [list(r) for r in table.rows]          # a new table: the cells before this one keep theirs
-    k = next((i for i, r in enumerate(rows) if all(c is None for c in r)), None)
+    new = copy.copy(table)                        # a new table: the lines before this one keep theirs
+    new.rows = [list(r) for r in table.rows]
+    row = list(cells) + [None if table.kind == 'grid' else ''] * (table.ncols - len(cells))
+    k = next((i for i, r in enumerate(new.rows) if all(c is None for c in r)), None) if table.kind == 'grid' else None
     if k is None:
-        rows.append(row)
+        new.rows.append(row)
     else:
-        rows[k] = row
-    return TableObj(table.ncols, rows)
+        new.rows[k] = row
+    return new
 
 
-TABLES = (TableObj, SignTableObj, VariationTableObj)
+TABLES = (TableObj,)

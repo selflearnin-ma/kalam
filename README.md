@@ -81,7 +81,8 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   To build one figure step by step: `G = Graphique()`, then `G.Tracer(f, A)`, `G.Courbe(sin(x))`, … (each adds
   to G and shows nothing), then the line `G` shows the figure with all its objects.
   The ⚙ button opens the figure's properties: width, height, axes, grid, x/y window, tick step (`1`, `0.5`,
-  `pi/2` for labels in π), and for each object colour, label, thickness, dashes, visible. They are saved with
+  `pi/2` for labels in π), and for each object its label text (`C_f` shows f as a subscript), colour, label
+  on/off, thickness, dashes, visible. They are saved with
   the notebook and used by the LaTeX export (except the tick step).
   In a figure: drag to pan, wheel or pinch to zoom, + − ⌂ buttons; drag a free point (`A = (1, 2)`) and its line
   is rewritten. Figures are exported to LaTeX (tkz) in place.
@@ -102,8 +103,11 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   `T.Ligne(x, -1, 0, 1, 2)`, `T.Ligne("$f(x)$", f(-1), f(0), f(1), f(2))` fill the rows (a row is added when
   none is empty); the line `T` shows it. Text cells: `"+"`, `"-"`, `"0"`, `"||"`, `"↗"`, `"↘"` become signs and
   arrows, `"$…$"` is a formula. English: `Table` / `T.Row(…)`; Arabic: `جدول` / `T.سطر(…)`.
+- `TableauSignes` and `TableauVariations` are tables too: `V = TableauVariations(f)` then `V.Ligne("signe de $f$", …)`
+  adds a sign row under it.
 - The ⚙ button of a table (on hover): column width (cm), first column, text size, borders, alignment,
-  header row/column; for sign/variation tables also factor rows and dotted lines. Used by the LaTeX export.
+  header row/column; for sign/variation tables also factor rows and dotted lines; and **the content of every
+  cell** (values in `$…$`, signs, arrows — changing an arrow moves the values up or down). Used by the LaTeX export.
 - The ⋯ button of a figure shows its zoom +, −, ⌂ and ⚙ buttons.
 
 ### Input language

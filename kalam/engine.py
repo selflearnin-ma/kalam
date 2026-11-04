@@ -358,7 +358,7 @@ class Session:
             if isinstance(c.value, runtime.Figure):
                 self._check_figure(c)
             if isinstance(c.value, runtime.VariationTableObj):     # f'(x) and f(x) rows use the function's name
-                c.value.name = next((k for k, v in self.env.items() if v is c.value.f and not k.startswith('_c')), 'f')
+                c.value.rename(next((k for k, v in self.env.items() if v is c.value.f and not k.startswith('_c')), 'f'))
             # a definition (f(x) = ..., A = ...) shows nothing; type `f`, `f(x)` or `A` to see a result
             if c.name is None and not silent:
                 c.latex = display_latex(c.value)

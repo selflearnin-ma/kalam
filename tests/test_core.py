@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import sympy as sp  # noqa: E402
 
 from kalam.engine import Cell, Session, dimension  # noqa: E402
+from kalam import runtime  # noqa: E402
 from kalam.export import figure_tkz, load_klm, save_klm, to_latex, to_python  # noqa: E402
 
 x, y = sp.symbols('x y')
@@ -126,9 +127,11 @@ def test_figures():
 def test_tables():
     s = run('g(x) = x^3 - 3x', 'TableauSignes(x^2 - x - 6)', 'TableauVariations(g)', 'جدول_التغيرات(1/x)', 'TableauSignes(sqrt(x) - 1)')
     st, vt, inv, rt = (c.value for c in s.cells[1:])
-    assert st.xs == [-sp.oo, -2, 3, sp.oo] and st.rows[-1][1] == ['', '+', 'z', '-', 'z', '+', '']
-    assert vt.name == 'g' and [a for _, a, _ in vt.vals] == [-sp.oo, 2, -2, sp.oo] and vt.fp == ['', '+', 'z', '-', 'z', '+', '']
-    assert inv.vals[1] == ('D', -sp.oo, sp.oo) and 'tkzTabVar{+/ $0$, -D+/ $-\\infty$ / $+\\infty$, -/ $0$}' in '\n'.join(inv.tkztab())
+    assert isinstance(st, runtime.TableObj) and isinstance(vt, runtime.TableObj)      # they are tables
+    assert st.xs == [-sp.oo, -2, 3, sp.oo] and st.rows[-1][1:] == ['', '+', '0', '-', '0', '+', '']
+    assert vt.name == 'g' and vt.rows[2][1::2] == [-sp.oo, 2, -2, sp.oo] and vt.rows[1][1:] == ['', '+', '0', '-', '0', '+', '']
+    assert vt.rows[2][2::2] == ['↗', '↘', '↗'] and vt.rows[1][0] == "$g'(x)$"
+    assert inv.rows[2][3] == (-sp.oo, sp.oo) and 'tkzTabVar{+/ $0$, -D+/ $-\\infty$ / $+\\infty$, -/ $0$}' in '\n'.join(inv.tkztab())
     assert rt.xs == [0, 1, sp.oo]
     tex = to_latex(s)
     assert '\\usepackage{tkz-tab}' in tex and tex.count('tkzTabInit') == 4 and 'tkz-fct' not in tex
@@ -147,6 +150,11 @@ def test_table_by_rows():
     web.set_style(5, json.dumps({'borders': 'outer', 'headrow': True, 'colw': 1.5}))
     tex = web.export_text('tex', 'fr')
     assert '\\rowcolor{gray!15}$x$ & $1$ & $2$' in tex and 'p{1.5cm}' in tex and '\\usepackage{array,colortbl}' in tex
+    # sign/variation tables are tables: rows can be added, cells edited (an arrow moves the values)
+    web.set_cell(0, 'V = TableauVariations(x^2 - 4x)\nV.Ligne("signe", "", "-", "", "-", "")\nV')
+    web.set_style(2, json.dumps({'cells': {'2,3': '$-4$ (min)', '2,2': '↗'}}))
+    tex = web.export_text('tex', 'fr')
+    assert '\\tkzTabVar{-/ $+\\infty$, +/ $-4\\text{ (min)}$, +/ $+\\infty$}' in tex and "\\tkzTabLine{, -, t, -, }" in tex
     web.set_cell(0, 'TableauSignes((x - 1)/(x + 2))')
     web.set_style(0, json.dumps({'factors': False, 'dots': False}))
     assert len(json.loads(web.state())['lines'][0]['table']['rows']) == 2

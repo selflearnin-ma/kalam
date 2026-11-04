@@ -97,7 +97,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .adds button:hover { background: var(--accent-soft); border-style: solid; }
 
 /* tables (Tableau, TableauSignes, TableauVariations) */
-.ktab { position: relative; max-width: 100%; overflow-x: auto; padding: 2px 34px 2px 0; align-self: flex-start; }
+.ktab { position: relative; max-width: 100%; overflow-x: auto; padding: 2px 34px; align-self: center; }
+.cedit { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.cedit input { min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--bg); font-family: var(--mono); font-size: 12px; direction: ltr; }
+.cedit input.ed1 { border-color: var(--accent); background: var(--accent-soft); }
+.obj input.otext { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; background: var(--bg); direction: ltr; }
 .ktab .tset { position: absolute; top: 2px; right: 0; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); opacity: 0; transition: opacity .12s; }
 .ktab:hover .tset, .ktab .tset:focus-visible { opacity: 1; }
 @media (hover: none) { .ktab .tset { opacity: .8; } }
@@ -541,7 +545,8 @@ const figStyle = line => (S.cells[line] && S.cells[line].figure && S.cells[line]
 const objKey = (it, k) => it.name || '#' + k;
 function objStyle(st, it, k) {
   const o = (st.objs || {})[objKey(it, k)] || {};
-  return { color: o.color || COLORS[k % COLORS.length], label: o.label !== false, thick: +o.thick || 2.2, dash: !!o.dash, hide: !!o.hide };
+  return { color: o.color || COLORS[k % COLORS.length], label: o.label !== false, thick: +o.thick || 2.2, dash: !!o.dash, hide: !!o.hide,
+           name: o.text || it.name };   // the label shown: the object's name, or the text given in the options
 }
 function sizeBox(box, st) {
   box.style.height = st.h ? st.h + 'px' : '';
@@ -655,7 +660,7 @@ function fig2d(box, line) {
     }
     const pts = [];
     F.items.forEach((it, k) => { const o = objStyle(st, it, k); if (o.hide) return; cur = o;
-      for (const p of it.scene) { try { prim(p, o.color, o.label ? it.name : null, pts, v); } catch (e) { /* skip one bad object */ } } });
+      for (const p of it.scene) { try { prim(p, o.color, o.label ? o.name : null, pts, v); } catch (e) { /* skip one bad object */ } } });
     for (const p of pts) {
       g.beginPath(); g.arc(SX(p.x), SY(p.y), p.r + (p.free ? 1 : 0), 0, 7);
       g.fillStyle = p.col; g.fill(); g.lineWidth = 2; g.strokeStyle = css('--panel'); g.stroke();
@@ -677,7 +682,12 @@ function fig2d(box, line) {
     }
     g.stroke();
   }
-  function label(text, x, y, col) { g.fillStyle = col; g.font = '600 13px ' + css('--font'); g.textAlign = 'left'; g.fillText(text, x + 6, y - 8); }
+  function label(text, x, y, col) {     // "C_f" or "C_{f}": f as a subscript
+    g.fillStyle = col; g.font = '600 13px ' + css('--font'); g.textAlign = 'left';
+    const [main, sub] = String(text).split(/_(.*)/s);
+    g.fillText(main, x + 6, y - 8);
+    if (sub) { const w = g.measureText(main).width; g.font = '600 10px ' + css('--font'); g.fillText(sub.replace(/^\{(.*)\}$/, '$1'), x + 6 + w + 1, y - 4); }
+  }
   function prim(p, col, name, pts, v) {
     stroke(col);
     switch (p.k) {
@@ -702,7 +712,8 @@ function fig2d(box, line) {
         const n = Math.max(2, Math.ceil((hi - lo) * V.s)), xs = new Float64Array(n + 1), ys = new Float64Array(n + 1);
         for (let k = 0; k <= n; k++) { xs[k] = lo + (hi - lo) * k / n; ys[k] = f(xs[k]); }
         path(xs, ys);
-        if (name) { const k = Math.floor(n * 0.85); for (let j = k; j >= 0; j--) if (ys[j] > v.ymin && ys[j] < v.ymax) { label(name, SX(xs[j]), SY(ys[j]), col); break; } }
+        // label near the right end, kept inside the figure (not where the curve leaves it)
+        if (name) { const m = (v.ymax - v.ymin) * 0.1, k = Math.floor(n * 0.85); for (let j = k; j >= 0; j--) if (ys[j] > v.ymin + m && ys[j] < v.ymax - m) { label(name, SX(xs[j]), SY(ys[j]), col); break; } }
         break; }
       case 'par': {
         const fx = fn([p.v], p.js[0]), fy = fn([p.v], p.js[1]); if (!fx || !fy) return;
@@ -856,7 +867,7 @@ function fig3d(box, line) {
     try { await loadPlotly(); } catch (e) { box.textContent = 'Plotly could not load.'; return; }
     const T = [];
     F.items.forEach((it, k) => { const o = objStyle(st, it, k); if (o.hide) return;
-      for (const p of it.scene) { try { T.push(...traces3d(p, o.color, o.label ? it.name : '')); } catch (e) {} } });
+      for (const p of it.scene) { try { T.push(...traces3d(p, o.color, o.label ? o.name : '')); } catch (e) {} } });
     const ax = t => ({ range: [-R3, R3], title: { text: t }, gridcolor: css('--grid-major'), zerolinecolor: css('--axis'), backgroundcolor: css('--bg'), showbackground: true, color: css('--muted'),
       visible: st.axes !== false, showgrid: st.grid !== false });
     Plotly.react(plot, T, { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: css('--panel'), showlegend: false, uirevision: 'k',
@@ -890,7 +901,7 @@ function figPanel(line) {
   h += `</div><h3>${esc(tr('fig_objects'))}</h3><div class="objs">`;
   F.items.forEach((it, k) => { const o = objStyle(st, it, k), key = esc(objKey(it, k));
     h += `<div class="obj" data-o="${key}"><input type="color" data-p="color" value="${o.color}" aria-label="${esc(tr('fig_color'))}">
-      <b>${esc(it.name || '#' + (k + 1))}</b><label><input type="checkbox" data-p="show" ${o.hide ? '' : 'checked'}>${esc(tr('fig_show'))}</label>
+      <input class="otext" data-p="text" value="${esc((st.objs || {})[objKey(it, k)]?.text ?? '')}" placeholder="${esc(it.name || '#' + (k + 1))}" aria-label="${esc(tr('fig_name'))}" spellcheck="false"><label><input type="checkbox" data-p="show" ${o.hide ? '' : 'checked'}>${esc(tr('fig_show'))}</label>
       <div class="opts">${it.name ? `<label><input type="checkbox" data-p="label" ${o.label ? 'checked' : ''}>${esc(tr('fig_label'))}</label>` : ''}
       <label>${esc(tr('fig_thick'))}<input type="range" data-p="thick" min="1" max="6" step="0.2" value="${o.thick}"></label>
       <label><input type="checkbox" data-p="dash" ${o.dash ? 'checked' : ''}>${esc(tr('fig_dash'))}</label></div></div>`; });
@@ -903,7 +914,7 @@ function tabPanel(line) {
   figLine = line; panelKind = 'table';
   const d = $('#dFig'), T = S.cells[line].table, st = T.style || {};
   const num = (k, ph, min, max, step) => `<input type="number" data-k="${k}" value="${st[k] ?? ''}" placeholder="${esc(ph)}" min="${min}" max="${max}" step="${step}">`;
-  const chk = (k, t, def) => `<label><input type="checkbox" data-k="${k}" data-def="${def}" ${(st[k] ?? def) ? 'checked' : ''}>${esc(tr(t))}</label>`;
+  const chk = (k, t, def) => `<label style="grid-column: 2 / 4"><input type="checkbox" data-k="${k}" data-def="${def}" ${(st[k] ?? def) ? 'checked' : ''}>${esc(tr(t))}</label>`;
   const sel = (k, opts) => `<select data-k="${k}" class="btn">${opts.map(([v, t]) => `<option value="${v}" ${(st[k] || opts[0][0]) === v ? 'selected' : ''}>${esc(tr(t))}</option>`).join('')}</select>`;
   let h = `<div class="row"><h2>${esc(tr('tab_props'))}</h2><div class="spacer"></div><button class="btn" data-close>${esc(tr('close'))}</button></div><div class="fp">
     <span>${esc(tr('tab_colw'))}</span>${num('colw', tr('fig_auto'), 0.3, 15, 0.1)}<span></span>
@@ -911,21 +922,34 @@ function tabPanel(line) {
     <span>${esc(tr('tab_size'))}</span>${num('size', '100', 50, 250, 10)}<span></span>`;
   if (T.kind === 'grid') h += `<span>${esc(tr('tab_borders'))}</span>${sel('borders', [['all', 'tab_all'], ['outer', 'tab_outer'], ['none', 'tab_none']])}<span></span>
     <span>${esc(tr('tab_align'))}</span>${sel('align', [['center', 'tab_center'], ['left', 'tab_left'], ['right', 'tab_right']])}<span></span>
-    <span></span>${chk('headrow', 'tab_headrow', false)}<span></span><span></span>${chk('headcol', 'tab_headcol', false)}<span></span>`;
-  else h += (T.kind === 'sign' ? `<span></span>${chk('factors', 'tab_factors', true)}<span></span>` : '') + `<span></span>${chk('dots', 'tab_dots', true)}<span></span>`;
-  h += `</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
+    <span></span>${chk('headrow', 'tab_headrow', false)}<span></span>${chk('headcol', 'tab_headcol', false)}`;
+  else h += (T.kind === 'sign' ? `<span></span>${chk('factors', 'tab_factors', true)}` : '') + `<span></span>${chk('dots', 'tab_dots', true)}`;
+  // the cells, as text: values as $LaTeX$, marks + - 0 || ↗ ↘; an edited cell is highlighted
+  const ed = st.cells || {}, ncol = Math.max(...T.src.map(r => r.length));
+  h += `</div><h3>${esc(tr('tab_cells'))}</h3><div class="cedit" style="grid-template-columns: repeat(${ncol}, minmax(64px, 1fr))">`;
+  T.src.forEach((row, r) => { for (let c = 0; c < ncol; c++) {
+    const key = r + ',' + c, has = key in ed, v = c < row.length ? (has ? ed[key] : row[c]) : null;
+    h += v === null ? '<span></span>' : `<input data-cell="${key}" data-src="${esc(row[c])}" value="${esc(v)}" class="${has ? 'ed1' : ''}" spellcheck="false" aria-label="${r + 1}, ${c + 1}">`;
+  } });
+  h += `</div><div class="note">${esc(tr('tab_cells_hint'))}</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
   $('#figBody').innerHTML = h;
   $('#figReset').onclick = () => { setFigStyle({}); tabPanel(line); };
   if (!d.open) d.show();
 }
 function readTabPanel() {
   const st = {};
-  $('#figBody').querySelectorAll('[data-k]').forEach(el => {
+  $('#figBody').querySelectorAll('.fp [data-k]').forEach(el => {
     const k = el.dataset.k;
     if (el.type === 'checkbox') { if (el.checked !== (el.dataset.def === 'true')) st[k] = el.checked; }
     else if (el.tagName === 'SELECT') { if (el.selectedIndex > 0) st[k] = el.value; }
     else if (el.value !== '' && isFinite(+el.value) && +el.value >= +el.min && +el.value <= +el.max) st[k] = +el.value;
   });
+  const cells = {};
+  $('#figBody').querySelectorAll('[data-cell]').forEach(el => {
+    const edited = el.value !== el.dataset.src; el.classList.toggle('ed1', edited);
+    if (edited) cells[el.dataset.cell] = el.value;
+  });
+  if (Object.keys(cells).length) st.cells = cells;
   return st;
 }
 // read the panel back into a style (defaults left out, so files stay small)
@@ -945,6 +969,7 @@ function readFigPanel() {
     if (get('label') && !get('label').checked) o.label = false;
     if (+get('thick').value !== def.thick) o.thick = +get('thick').value;
     if (get('dash').checked) o.dash = true;
+    if (get('text').value.trim()) o.text = get('text').value.trim();
     if (Object.keys(o).length) objs[row.dataset.o] = o;
   });
   if (Object.keys(objs).length) st.objs = objs;
