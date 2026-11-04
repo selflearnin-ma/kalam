@@ -59,6 +59,8 @@ BUILTINS = [
     ('Inverse', 'Inverse', 'مقلوب', 'matrix', 'M'),
     ('Transpose', 'Transposée', 'منقول', 'matrix', 'M'),
     ('Eigenvalues', 'ValeursPropres', 'قيم_ذاتية', 'matrix', 'M'),
+    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'calculus', 'x^2 - 4'),
+    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'calculus', 'f'),
     ('Graphic', 'Graphique', 'رسم', 'graph2d', ''),
     ('Draw', 'Tracer', 'ارسم', 'graph2d', 'f, A, c'),
     ('Plot', 'Courbe', 'منحنى', 'graph2d', 'f, a, b'),

@@ -104,6 +104,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .vbtns button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); font-size: 15px; }
 .vbtns button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
 .vbtns button:hover { border-color: var(--accent); color: var(--accent); }
+.vbtns.collapsed button:not([data-z=more]) { display: none; }
+.vbtns [data-z=more] { font-size: 17px; line-height: 1; color: var(--muted); }
 .fig.fig3d .vbtns { z-index: 3; top: 8px; left: 8px; right: auto; }
 #dFig { position: fixed; inset: 70px max(16px, env(safe-area-inset-right, 0px)) auto auto; margin: 0; width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - 90px); overflow-y: auto; box-shadow: 0 16px 40px rgb(0 0 0 / 0.18); z-index: 45; }
@@ -523,6 +525,13 @@ function piLabel(v) {   // 1.5707… -> π/2
     const num = n === 1 ? '' : n === -1 ? '−' : String(n).replace('-', '−'); return d === 1 ? num + 'π' : num + 'π/' + d; } }
   return String(+v.toPrecision(4));
 }
+// the figure's buttons stay folded behind ⋯ until asked for
+function toggleBtns(z) {
+  if (z.dataset.z !== 'more') return false;
+  const open = z.parentNode.classList.toggle('collapsed') === false;
+  z.setAttribute('aria-expanded', open); z.textContent = open ? '×' : '⋯';
+  return true;
+}
 function figureEl(i) {
   const box = document.createElement('div');
   box.className = 'fig' + (S.cells[i].figure.dim === 3 ? ' fig3d' : '');
@@ -531,7 +540,7 @@ function figureEl(i) {
   return box;
 }
 function fig2d(box, line) {
-  box.innerHTML = `<canvas></canvas><div class="vbtns"><button data-z="in" aria-label="zoom +">+</button><button data-z="out" aria-label="zoom −">−</button><button data-z="home" aria-label="home">⌂</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div><div class="coords"></div>`;
+  box.innerHTML = `<canvas></canvas><div class="vbtns collapsed"><button data-z="more" aria-label="⋯" title="⋯" aria-expanded="false">⋯</button><button data-z="in" aria-label="zoom +">+</button><button data-z="out" aria-label="zoom −">−</button><button data-z="home" aria-label="home">⌂</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div><div class="coords"></div>`;
   const cv = box.querySelector('canvas'), g = cv.getContext('2d'), coords = box.querySelector('.coords');
   const figure = () => S.cells[line] && S.cells[line].figure;
   const winKey = () => { const st = figStyle(line); return ['xmin', 'xmax', 'ymin', 'ymax'].map(k => st[k] ?? '').join(','); };
@@ -721,7 +730,7 @@ function fig2d(box, line) {
   cv.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = local(e); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, x, y); }, { passive: false });
   function zoomAt(k, x, y) { const wx = WX(x), wy = WY(y); V.s = Math.min(5000, Math.max(2, V.s * k)); V.cx += wx - WX(x); V.cy += wy - WY(y); keep(); draw(); }
   box.querySelector('.vbtns').onclick = e => {
-    const z = e.target.closest('[data-z]'); if (!z) return;
+    const z = e.target.closest('[data-z]'); if (!z || toggleBtns(z)) return;
     if (z.dataset.z === 'opts') return figPanel(line);
     if (z.dataset.z === 'home') { V = fit(); keep(); draw(); }
     else zoomAt(z.dataset.z === 'in' ? 1.25 : 0.8, cv.clientWidth / 2, cv.clientHeight / 2);
@@ -777,9 +786,9 @@ function traces3d(p, col, name) {
   return T;
 }
 function fig3d(box, line) {
-  box.innerHTML = `<div class="p3" style="width:100%;height:100%"></div><div class="vbtns"><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div>`;
+  box.innerHTML = `<div class="p3" style="width:100%;height:100%"></div><div class="vbtns collapsed"><button data-z="more" aria-label="⋯" title="⋯" aria-expanded="false">⋯</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div>`;
   const plot = box.querySelector('.p3');
-  box.querySelector('.vbtns').onclick = () => figPanel(line);
+  box.querySelector('.vbtns').onclick = e => { const z = e.target.closest('[data-z]'); if (z && !toggleBtns(z)) figPanel(line); };
   async function draw() {
     const F = S.cells[line] && S.cells[line].figure; if (!F) return;
     const st = F.style || {};

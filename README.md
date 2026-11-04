@@ -94,6 +94,12 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 - **Clavier** tab: x, y, □², □^□, □/□, √□, ⁿ√□, |□|, π, e, ∞, ≤, sin, ln… inserted at the cursor, cursor left inside the box.
 - Notebooks from earlier versions open unchanged: their text cells become `"…"` lines.
 
+- **Tables**: `TableauSignes(x^2 - x - 6)` gives the sign table (a row per factor, then the expression;
+  `‖` where it is not defined); `TableauVariations(f)` gives the sign of f′ and the variations of f with its
+  values, limits at ±∞ and on each side of a forbidden value. Coefficients must be numbers (a slider works).
+  In the LaTeX export they become `tkz-tab` tables.
+- The ⋯ button of a figure shows its zoom +, −, ⌂ and ⚙ buttons.
+
 ### Input language
 
 | You type | Meaning |
