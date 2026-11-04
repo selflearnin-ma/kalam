@@ -463,6 +463,11 @@ def Plot3D(f):
     """Plot3D(f) | Plot3D(expr in x, y): 3D figure of the surface z = f(x, y)."""
     if isinstance(f, sp.Lambda):
         return Figure([Surface([f.expr.subs(dict(zip(f.variables, (x, y))))])])
+    if isinstance(f, sp.Eq):           # x^2 + y^2 + z = 0: one surface per solution for z
+        sols = [e for e in sp.solve(f, z) if e.free_symbols <= {x, y}]
+        if not sols:
+            raise ValueError('cannot write %s as z = f(x, y)' % f)
+        return Figure([Surface([e]) for e in sols])
     return Figure([Surface([f])])
 
 
