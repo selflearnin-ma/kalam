@@ -23,7 +23,7 @@
    "color": null
   },
   {
-   "text": "Résoudre(f(x) = 0, x)",
+   "text": "Solve(f(x) = 0, x)",
    "block": 1,
    "visible": true,
    "color": null
@@ -35,7 +35,7 @@
    "color": null
   },
   {
-   "text": "T = Tangente(f, 3)",
+   "text": "T = Tangent(f, 3)",
    "block": 7,
    "visible": true,
    "color": null
@@ -53,7 +53,7 @@
    "color": null
   },
   {
-   "text": "Tracer(f, T)",
+   "text": "Draw(f, T)",
    "block": 7,
    "visible": true,
    "color": null
@@ -71,19 +71,19 @@
    "color": null
   },
   {
-   "text": "I = Milieu(A, B)",
+   "text": "I = Midpoint(A, B)",
    "block": 12,
    "visible": true,
    "color": null
   },
   {
-   "text": "c = Cercle(I, A)",
+   "text": "c = Circle(I, A)",
    "block": 12,
    "visible": true,
    "color": null
   },
   {
-   "text": "d = Médiatrice(A, B)",
+   "text": "d = PerpendicularBisector(A, B)",
    "block": 12,
    "visible": true,
    "color": null
@@ -107,13 +107,13 @@
    "color": null
   },
   {
-   "text": "Tracer(A, B, I, c, d)",
+   "text": "Draw(A, B, I, c, d)",
    "block": 12,
    "visible": true,
    "color": null
   },
   {
-   "text": "a = Curseur(-3, 3, 0.1, 1.5)",
+   "text": "a = Slider(-3, 3, 0.1, 1.5)",
    "block": 22,
    "visible": true,
    "color": null
@@ -131,7 +131,7 @@
    "color": null
   },
   {
-   "text": "Tracer(g)",
+   "text": "Draw(g)",
    "block": 22,
    "visible": true,
    "color": null
@@ -155,13 +155,13 @@
    "color": null
   },
   {
-   "text": "Tracer(D)",
+   "text": "Draw(D)",
    "block": 29,
    "visible": true,
    "color": null
   },
   {
-   "text": "Graphe3D(sin(x) cos(y))",
+   "text": "Plot3D(sin(x) cos(y))",
    "block": 29,
    "visible": true,
    "color": null

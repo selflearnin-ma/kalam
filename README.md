@@ -52,7 +52,7 @@ python tests/test_core.py            # core self-checks
 | Idea | From | In Kalam |
 |---|---|---|
 | Objects defined by commands on other objects, recomputed when a free object moves | GeoGebra | each cell is a definition; editing/dragging re-evaluates the following cells |
-| Localized command names, file portable across languages | GeoGebra | every command has an English, French and Arabic name, all accepted everywhere |
+| Interface in several languages | GeoGebra | menus, messages and help in French, Arabic and English; commands keep one (English) name |
 | Type an equation, see its graph | Desmos | `y = 2x+1`, `x^2+y^2<4`, `z = x y` are drawn directly |
 | Sliders | Desmos | `a = Slider(-5, 5, 0.1)` shows a slider; moving it updates graphs live |
 | Input turns into rendered math, click to edit | Desmos / notebooks | each cell shows its rendered result; click it to edit |
@@ -69,16 +69,16 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 | Line | Example | Shown |
 |---|---|---|
 | definition | `f(x) = x^2 - 2x - 3`, `A = (1, 2)` | nothing |
-| expression | `Résoudre(f(x) = 0, x)`, `f`, `f(x)`, `A` | its result |
-| drawing | `Tracer(f, A, c)`, `Courbe(f)`, `Graphe3D(x y)` | a figure |
+| expression | `Solve(f(x) = 0, x)`, `f`, `f(x)`, `A` | its result |
+| drawing | `Draw(f, A, c)`, `Plot(f)`, `Plot3D(x y)` | a figure |
 | text | `"Soit $f$ définie par $f(x) = {{f(x)}}$."` or `« … »` | the sentence; `$…$` is a formula, `{{expr}}` a computed value |
-| hidden result | `Résoudre(f(x) = 0, x);` | nothing (trailing `;`) |
+| hidden result | `Solve(f(x) = 0, x);` | nothing (trailing `;`) |
 | comment | `# pour moi` | nothing |
 
 - The code is never shown, only the output (a cell of definitions shows nothing); click a cell to edit it.
 - **Figures appear only where you ask for them**, as the output of a drawing command:
-  `Tracer(f, A, c)` (any 2D or 3D objects), `Courbe(f, a, b)` (one function), `Graphe3D(x^2 - y^2)`.
-  To build one figure step by step: `G = Graphique()`, then `G.Tracer(f, A)`, `G.Courbe(sin(x))`, … (each adds
+  `Draw(f, A, c)` (any 2D or 3D objects), `Plot(f, a, b)` (one function), `Plot3D(x^2 - y^2)`.
+  To build one figure step by step: `G = Graphic()`, then `G.Draw(f, A)`, `G.Plot(sin(x))`, … (each adds
   to G and shows nothing), then the line `G` shows the figure with all its objects.
   The ⚙ button opens the figure's properties: width, height, axes, grid, x/y window, tick step (`1`, `0.5`,
   `pi/2` for labels in π), and for each object its label text (`C_f` shows f as a subscript, `$\mathcal{C}_f$`
@@ -96,15 +96,15 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 - **Clavier** tab: x, y, □², □^□, □/□, √□, ⁿ√□, |□|, π, e, ∞, ≤, sin, ln… inserted at the cursor, cursor left inside the box.
 - Notebooks from earlier versions open unchanged: their text cells become `"…"` lines.
 
-- **Tables**: `TableauSignes(x^2 - x - 6)` gives the sign table (a row per factor, then the expression;
-  `‖` where it is not defined); `TableauVariations(f)` gives the sign of f′ and the variations of f with its
+- **Tables**: `SignTable(x^2 - x - 6)` gives the sign table (a row per factor, then the expression;
+  `‖` where it is not defined); `VariationTable(f)` gives the sign of f′ and the variations of f with its
   values, limits at ±∞ and on each side of a forbidden value. Coefficients must be numbers (a slider works).
   In the LaTeX export they become `tkz-tab` tables.
-- **Your own tables**, built like graphics: `T = Tableau(5, 2)` (5 columns, 2 empty rows), then
-  `T.Ligne(x, -1, 0, 1, 2)`, `T.Ligne("$f(x)$", f(-1), f(0), f(1), f(2))` fill the rows (a row is added when
+- **Your own tables**, built like graphics: `T = Table(5, 2)` (5 columns, 2 empty rows), then
+  `T.Row(x, -1, 0, 1, 2)`, `T.Row("$f(x)$", f(-1), f(0), f(1), f(2))` fill the rows (a row is added when
   none is empty); the line `T` shows it. Text cells: `"+"`, `"-"`, `"0"`, `"||"`, `"↗"`, `"↘"` become signs and
-  arrows, `"$…$"` is a formula. English: `Table` / `T.Row(…)`; Arabic: `جدول` / `T.سطر(…)`.
-- `TableauSignes` and `TableauVariations` are tables too: `V = TableauVariations(f)` then `V.Ligne("signe de $f$", …)`
+  arrows, `"$…$"` is a formula.
+- `SignTable` and `VariationTable` are tables too: `V = VariationTable(f)` then `V.Row("signe de $f$", …)`
   adds a sign row under it.
 - The ⚙ button of a table (on hover): column width (cm), first column, text size, borders, alignment,
   header row/column; for sign/variation tables also factor rows and the lines at the values (dotted, solid cut
@@ -131,104 +131,117 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 | `$3` | result of cell 3 (its last line) |
 | Arabic-Indic digits `٣`, Arabic comma `،` | accepted |
 
-Results are **exact** (decimals are read as fractions: `0.25` → `1/4`); use `Numeric(e)` / `Valeur(e)`
+Results are **exact** (decimals are read as fractions: `0.25` → `1/4`); use `Numeric(e)` / `Numeric(e)`
 for a decimal approximation. Irrational numbers also show `≈`.
 
 ---
 
 ## 3. Commands
 
+Commands have one name, the same in every interface language (French, Arabic and English menus).
+Notebooks written with the French or Arabic command names of earlier versions are converted when opened.
+
 **Geometry**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Point | Point | نقطة | `x, y` |
-| Segment | Segment | قطعة | `A, B` |
-| Line | Droite | مستقيم | `A, B` |
-| Ray | DemiDroite | نصف_مستقيم | `A, B` |
-| Circle | Cercle | دائرة | `O, r` |
-| Polygon | Polygone | مضلع | `A, B, C` |
-| Midpoint | Milieu | منتصف | `A, B` |
-| Intersect | Intersection | تقاطع | `a, b` |
-| Perpendicular | Perpendiculaire | عمودي | `A, d` |
-| Parallel | Parallèle | مواز | `A, d` |
-| PerpendicularBisector | Médiatrice | واسط | `A, B` |
-| AngleBisector | Bissectrice | منصف | `A, B, C` |
-| Distance | Distance | مسافة | `A, B` |
-| Length | Longueur | طول | `s` |
-| Area | Aire | مساحة | `P` |
-| Tangent | Tangente | مماس | `f, a` |
-| Vector | Vecteur | متجهة | `A, B` |
+| Command | Arguments |
+|---|---|
+| Point | `x, y` |
+| Segment | `A, B` |
+| Line | `A, B` |
+| Ray | `A, B` |
+| Circle | `O, r` |
+| Polygon | `A, B, C` |
+| Midpoint | `A, B` |
+| Intersect | `a, b` |
+| Perpendicular | `A, d` |
+| Parallel | `A, d` |
+| PerpendicularBisector | `A, B` |
+| AngleBisector | `A, B, C` |
+| Distance | `A, B` |
+| Length | `s` |
+| Area | `P` |
+| Tangent | `f, a` |
+| Vector | `A, B` |
 
 **Transformations**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Reflect | Symétrie | تماثل | `o, d` |
-| Rotate | Rotation | دوران | `o, pi/2, O` |
-| Translate | Translation | إزاحة | `o, u` |
-| Dilate | Homothétie | تحاك | `o, k, O` |
+| Command | Arguments |
+|---|---|
+| Reflect | `o, d` |
+| Rotate | `o, pi/2, O` |
+| Translate | `o, u` |
+| Dilate | `o, k, O` |
 
 **Algebra**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Simplify | Simplifier | تبسيط | `e` |
-| Expand | Développer | نشر | `e` |
-| Factor | Factoriser | تعميل | `e` |
-| Solve | Résoudre | حل | `x^2 = 4, x` |
-| CSolve | RésoudreC | حل_عقدي | `x^2 = -4, x` |
-| NSolve | RésoudreN | حل_عددي | `e, x` |
-| Substitute | Substituer | تعويض | `e, x, 2` |
-| Numeric | Valeur | قيمة_مقربة | `e, 5` |
-| PartialFractions | ElémentsSimples | تفكيك | `e` |
-| GCD | PGCD | قاسم_مشترك | `a, b` |
-| LCM | PPCM | مضاعف_مشترك | `a, b` |
-| Divisors | Diviseurs | قواسم | `n` |
-| IsPrime | EstPremier | أولي | `n` |
+| Command | Arguments |
+|---|---|
+| Simplify | `e` |
+| Expand | `e` |
+| Factor | `e` |
+| Solve | `x^2 = 4, x` |
+| CSolve | `x^2 = -4, x` |
+| NSolve | `e, x` |
+| Substitute | `e, x, 2` |
+| Numeric | `e, 5` |
+| PartialFractions | `e` |
+| GCD | `a, b` |
+| LCM | `a, b` |
+| Divisors | `n` |
+| IsPrime | `n` |
 
 **Calculus**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Derivative | Dérivée | مشتقة | `f` |
-| Integral | Intégrale | تكامل | `f, a, b` |
-| Limit | Limite | نهاية | `f, oo` |
-| Series | DL | نشر_محدود | `f, 0, 4` |
-| Sum | Somme | مجموع | `k^2, k, 1, n` |
-| Sequence | Suite | متتالية | `k^2, k, 1, 5` |
+| Command | Arguments |
+|---|---|
+| Derivative | `f` |
+| Integral | `f, a, b` |
+| Limit | `f, oo` |
+| Series | `f, 0, 4` |
+| Sum | `k^2, k, 1, n` |
+| Sequence | `k^2, k, 1, 5` |
+
+**Tables**
+
+| Command | Arguments |
+|---|---|
+| Table | `3, 2` |
+| Row | `T, a, b, c` |
+| SignTable | `x^2 - 4` |
+| VariationTable | `f` |
 
 **Matrices**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Matrix | Matrice | مصفوفة | `[[1, 2], [3, 4]]` |
-| Det | Déterminant | محددة | `M` |
-| Inverse | Inverse | مقلوب | `M` |
-| Transpose | Transposée | منقول | `M` |
-| Eigenvalues | ValeursPropres | قيم_ذاتية | `M` |
+| Command | Arguments |
+|---|---|
+| Matrix | `[[1, 2], [3, 4]]` |
+| Det | `M` |
+| Inverse | `M` |
+| Transpose | `M` |
+| Eigenvalues | `M` |
 
 **Graphs**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Plot | Courbe | منحنى | `f, a, b` |
-| ParametricCurve | CourbeParamétrée | منحنى_وسيطي | `cos(t), sin(t), t, 0, 2pi` |
-| Slider | Curseur | منزلق | `-5, 5, 0.1` |
+| Command | Arguments |
+|---|---|
+| Graphic | `` |
+| Draw | `f, A, c` |
+| Plot | `f, a, b` |
+| ParametricCurve | `cos(t), sin(t), t, 0, 2pi` |
+| Slider | `-5, 5, 0.1` |
 
 **Space**
 
-| English | Français | العربية | Arguments |
-|---|---|---|---|
-| Plot3D | Graphe3D | رسم_فضائي | `x^2 - y^2` |
-| ParametricSurface | SurfaceParamétrée | سطح_وسيطي | `cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2` |
-| Sphere | Sphère | فلكة | `O, r` |
-| Plane | Plan | مستوى | `A, B, C` |
+| Command | Arguments |
+|---|---|
+| Plot3D | `x^2 - y^2` |
+| ParametricSurface | `cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2` |
+| Sphere | `O, r` |
+| Plane | `A, B, C` |
 
 ### Your own commands
-**Commands → Commands editor**: write a Python function `run(*args)` with SymPy, give it an
-English, French and Arabic name, a category and an argument hint; **Test** it, **Save** it.
-It appears in the palette (*My commands*) and works in the notebook in all three languages.
+**Commands → Commands editor**: write a Python function `run(*args)` with SymPy, give it a name,
+a category and an argument hint; **Test** it, **Save** it. It appears in the palette (*My commands*).
 Inside the code you have `sp` (SymPy), the symbols `x y z t`, every built-in command and the helpers
 `_body(f)` (expression and variable of a function) and `_pt(p)` (tuple → point). Example:
 

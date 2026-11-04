@@ -23,7 +23,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB = os.path.join(ROOT, 'web')
 DIST = os.path.join(WEB, 'dist')
 DEPS = os.path.join(WEB, '.deps')
-NPM = {'pyodide': 'pyodide@0.27.7', 'mathjax': 'mathjax@3.2.2', 'plotly': 'plotly.js-dist-min@2.35.2'}
+NPM = {'pyodide': 'pyodide@0.27.7', 'mathjax': 'mathjax@3.2.2', 'plotly': 'plotly.js-dist-min@2.35.2',
+       'computer-modern': 'computer-modern@0.1.3'}
+# Computer Modern (the LaTeX font, OFL) for the text of the notebook: fonts/ next to the page
+FONTS = ['cmu-serif-500-roman.woff2', 'cmu-serif-500-italic.woff2', 'cmu-serif-700-roman.woff2']
 # offline copies of the CDN scripts used by app.html: (CDN url, file in the npm package)
 VENDOR = {'mathjax': ('https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js', 'es5/tex-svg.js'),
           'plotly': ('https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js', 'plotly.min.js')}
@@ -101,6 +104,9 @@ def main(offline=False):
         with open(src.get(f) or os.path.join(wheels_dir, f), 'rb') as a, open(os.path.join(DIST, 'py', f + '.txt'), 'wb') as b:
             b.write(base64.b64encode(a.read()))
     os.remove(core)
+    os.makedirs(os.path.join(DIST, 'fonts'))
+    for f in FONTS:
+        shutil.copy(os.path.join(DEPS, 'computer-modern', 'fonts', f), os.path.join(DIST, 'fonts', f))
     page = open(os.path.join(WEB, 'app.html'), encoding='utf-8').read()
     for lang in ('fr', 'ar'):
         with open(os.path.join(ROOT, 'examples', 'demo_%s.klm' % lang), encoding='utf-8') as f:

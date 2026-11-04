@@ -255,9 +255,6 @@ def save_command(d_json):
     old = reg.commands.get(d['name'])
     if old is not None and old.code is None:
         raise ValueError('"%s" is a built-in command' % d['name'])
-    for a in (d.get('fr'), d.get('ar')):
-        if a and reg.aliases().get(a) not in (None, d['name']):
-            raise ValueError('"%s" is already used' % a)
     reg.add_user(d)
     session.evaluate_all()
     return catalog()

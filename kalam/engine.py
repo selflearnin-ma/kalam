@@ -22,7 +22,7 @@ from sympy.geometry.entity import GeometryEntity
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations
 
 from . import runtime
-from .commands import Registry
+from .commands import Registry, migrate
 
 X, Y, Z = runtime.x, runtime.y, runtime.z
 EQUATION_VARS = {'x', 'y', 'z'}
@@ -259,12 +259,12 @@ class Cell:
 
     @property
     def shows_figure(self):
-        """The line's output is a figure: Tracer(...), Courbe(...), Graphe3D(...) or the name of one."""
+        """The line's output is a figure: Draw(...), Plot(...), Plot3D(...) or the name of one."""
         return isinstance(self.value, runtime.Figure) and not self.name and not self.silent and not self.error
 
     @property
     def shows_table(self):
-        """The line's output is a table: Tableau(...), TableauSignes(...), TableauVariations(...) or the name of one."""
+        """The line's output is a table: Table(...), SignTable(...), VariationTable(...) or the name of one."""
         return isinstance(self.value, runtime.TABLES) and not self.name and not self.silent and not self.error
 
     @property
@@ -439,12 +439,13 @@ class Session:
         self.cells[:] = []
         self._snap = {}
         ids = {}       # block in the file -> fresh id (ids saved in a file may collide with new cells' ids)
+        legacy = self.registry.legacy()   # French / Arabic command names of earlier versions -> English
         for k, d in enumerate(items):
             key = d.get('block', ('old', k))
             if d.get('kind') == 'text':
                 lines = ['"%s"' % ln.replace('"', '\\"') for ln in d['text'].split('\n') if ln.strip()] or ['']
             else:
-                lines = [d['text']]
+                lines = [migrate(d['text'], legacy)]
             for ln in lines:
                 c = self.add_cell(ln, block=ids.get(key))
                 ids.setdefault(key, c.block)

@@ -376,5 +376,5 @@ def figure_tkz(session):
     for p in pics:
         out += p
     if not pics:
-        out += ['% no 2D figure: draw one with Tracer(...) or Courbe(...)', '\\begin{tikzpicture}\\end{tikzpicture}']
+        out += ['% no 2D figure: draw one with Draw(...) or Plot(...)', '\\begin{tikzpicture}\\end{tikzpicture}']
     return '\n'.join(out + ['\\end{document}']) + '\n'

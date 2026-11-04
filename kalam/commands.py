@@ -1,18 +1,18 @@
-"""Command registry: canonical name -> function, with French and Arabic aliases.
-
-Any alias works in any UI language, so a .klm file stays portable.
+"""Command registry: command name -> function. Commands have one (English) name in every interface language;
+the French and Arabic names of earlier versions are kept only to update old notebooks when they are opened.
 User commands live in ~/.kalam/user_commands.json and must define `run(*args)`.
 """
 import json
 import os
+import re
 
 from . import runtime
 
 USER_FILE = os.path.join(os.path.expanduser('~'), '.kalam', 'user_commands.json')
 
-CATEGORIES = ['geometry', 'transform', 'algebra', 'calculus', 'matrix', 'graph2d', 'graph3d']
+CATEGORIES = ['geometry', 'transform', 'algebra', 'calculus', 'tables', 'matrix', 'graph2d', 'graph3d']
 
-# canonical, French, Arabic, category, argument hint, runtime function name
+# name, former French and Arabic names (old files only), category, argument hint
 BUILTINS = [
     ('Point', 'Point', 'نقطة', 'geometry', 'x, y'),
     ('Segment', 'Segment', 'قطعة', 'geometry', 'A, B'),
@@ -59,10 +59,10 @@ BUILTINS = [
     ('Inverse', 'Inverse', 'مقلوب', 'matrix', 'M'),
     ('Transpose', 'Transposée', 'منقول', 'matrix', 'M'),
     ('Eigenvalues', 'ValeursPropres', 'قيم_ذاتية', 'matrix', 'M'),
-    ('Table', 'Tableau', 'جدول', 'calculus', '3, 2'),
-    ('Row', 'Ligne', 'سطر', 'calculus', 'T, a, b, c'),
-    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'calculus', 'x^2 - 4'),
-    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'calculus', 'f'),
+    ('Table', 'Tableau', 'جدول', 'tables', '3, 2'),
+    ('Row', 'Ligne', 'سطر', 'tables', 'T, a, b, c'),
+    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'tables', 'x^2 - 4'),
+    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'tables', 'f'),
     ('Graphic', 'Graphique', 'رسم', 'graph2d', ''),
     ('Draw', 'Tracer', 'ارسم', 'graph2d', 'f, A, c'),
     ('Plot', 'Courbe', 'منحنى', 'graph2d', 'f, a, b'),
@@ -131,12 +131,23 @@ class Registry:
             json.dump([c.to_json() for c in self.user_commands()], f, ensure_ascii=False, indent=1)
 
     def aliases(self):
-        """alias -> canonical name, for all three languages."""
-        out = {}
-        for c in self.commands.values():
-            for a in (c.name, c.fr, c.ar):
-                out[a] = c.name
-        return out
+        """name -> name: the names the input language knows."""
+        return {c.name: c.name for c in self.commands.values()}
+
+    def legacy(self):
+        """Former French / Arabic command names -> name (for notebooks written with them)."""
+        return {a: c.name for c in self.commands.values() for a in (c.fr, c.ar) if a and a != c.name}
+
 
     def functions(self):
         return {c.name: c.func for c in self.commands.values()}
+
+
+def migrate(text, legacy):
+    """A line written with former French/Arabic command names, in English: Tracer(f) -> Draw(f), G.Tracer( -> G.Draw(.
+    Text between quotes is left as it is."""
+    if not legacy:
+        return text
+    pat = re.compile(r'(?<![\w])(%s)(?=\s*\()' % '|'.join(sorted(map(re.escape, legacy), key=len, reverse=True)))
+    parts = re.split(r'("(?:[^"\\]|\\.)*")', text)
+    return ''.join(p if k % 2 else pat.sub(lambda m: legacy[m.group(1)], p) for k, p in enumerate(parts))

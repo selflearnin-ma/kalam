@@ -26,8 +26,8 @@ def run(*lines):
 
 
 def test_languages_and_parsing():
-    s = run('A = (1, 2)', 'B := Point(5, 4)', 'I = Milieu(A, B)', 'ع = منتصف(A, B)',
-            'f(x) = x^2 - 2x - 3', "f'(1)", 'Résoudre(f(x) = 0, x)', 'حل(x^2 = 4, x)',
+    s = run('A = (1, 2)', 'B := Point(5, 4)', 'I = Midpoint(A, B)', 'ع = Midpoint(A, B)',
+            'f(x) = x^2 - 2x - 3', "f'(1)", 'Solve(f(x) = 0, x)', 'Solve(x^2 = 4, x)',
             '2(x+1) + 3x', 'e^(i π)', '√4 + 5!', '1/2 + 0.25', '$7')
     v = [c.value for c in s.cells]
     assert v[2] == sp.Point(3, 3) == v[3]
@@ -50,6 +50,20 @@ def test_languages_and_parsing():
     assert s.cells[-1].parts == [(False, 'on pose $f(x)=x^{2} - 2 x - 3$ et $-4$')]
 
 
+def test_old_names_are_updated():
+    # notebooks of earlier versions used French / Arabic command names: they open in English
+    s = Session()
+    s.load_cells([dict(text='A = (1, 2)\nc = Cercle(A, 2)'.split('\n')[0]), dict(text='c = Cercle(A, 2)'),
+                  dict(text='ع = منتصف(A, (3, 4))'), dict(text='G = Graphique()'), dict(text='G.Tracer(c, A)'),
+                  dict(text='"Tracer(f) reste un texte"'), dict(text='Cercle(A, 1)')])
+    assert [c.text for c in s.cells] == ['A = (1, 2)', 'c = Circle(A, 2)', 'ع = Midpoint(A, (3, 4))', 'G = Graphic()',
+                                         'G.Draw(c, A)', '"Tracer(f) reste un texte"', 'Circle(A, 1)']
+    assert all(c.error is None for c in s.cells)
+    s.add_cell('Cercle(A, 1)')                 # typed now: French names are not commands any more
+    s.evaluate_all()
+    assert not isinstance(s.cells[-1].value, sp.Circle)
+
+
 def test_drawables():
     s = run('y = 2x + 1', 'x^2 + y^2 < 4', 'z = x y', 'S = Sphere((0,0,0), 1)', 'c = Circle((0,0), 2)', '3 + 4')
     assert [dimension(c.value) for c in s.cells] == [2, 2, 3, 3, 2, None]
@@ -68,15 +82,15 @@ def test_user_command():
     s = Session()
     s.registry.add_user(dict(name='Double', fr='Double', ar='ضعف', category='algebra', hint='e',
                              code='def run(e):\n    return 2*e\n'))
-    s.add_cell('ضعف(x + 1)')
+    s.add_cell('Double(x + 1)')
     s.evaluate_all()
     assert s.cells[0].value == 2 * x + 2
 
 
 def test_exports():
-    s = run('A = (1, 2)', 'f(x) = x^2', 'k = Slider(0, 3)', 'T = Tangente(f, k)', 'Solve(f(x) = 4, x)',
-            'c = Cercle(A, 2)', 'Plot(sin(x), 0, pi)', 'u = ParametricCurve(cos(t), sin(t), t, 0, 2pi)',
-            'Tracer(f, A, c, T, u)')
+    s = run('A = (1, 2)', 'f(x) = x^2', 'k = Slider(0, 3)', 'T = Tangent(f, k)', 'Solve(f(x) = 4, x)',
+            'c = Circle(A, 2)', 'Plot(sin(x), 0, pi)', 'u = ParametricCurve(cos(t), sin(t), t, 0, 2pi)',
+            'Draw(f, A, c, T, u)')
     with tempfile.TemporaryDirectory() as d:
         py = os.path.join(d, 'out.py')
         with open(py, 'w', encoding='utf-8') as f:
@@ -91,7 +105,7 @@ def test_exports():
         assert [c.latex for c in s2.cells] == [c.latex for c in s.cells]
     tex = to_latex(s)
     assert '\\begin{document}' in tex and '\\left\\{-2, 2\\right\\}' in tex   # Solve(f(x) = 4, x)
-    assert tex.count('\\begin{tikzpicture}') == 2 and '\\usepackage{tkz-fct}' in tex   # Plot(...) and Tracer(...)
+    assert tex.count('\\begin{tikzpicture}') == 2 and '\\usepackage{tkz-fct}' in tex   # Plot(...) and Draw(...)
     fig = figure_tkz(s)
     assert '\\tkzDefPoint(1,2){A}' in fig and '\\tkzFct' in fig and '\\tkzDrawCircle' in fig
     assert fig.count('\\begin{tikzpicture}') == 2
@@ -99,8 +113,8 @@ def test_exports():
 
 def test_figures():
     s = Session()
-    for t in ('f(x) = x^2 - 2x - 3', 'A = (-2, 1)', 'c = Cercle(A, 2)', 'Tracer(f, A, c)', 'p = Tracer(f);', 'p',
-              'Courbe(sin(x), 0, pi)', 'Graphe3D(x y)', 'Tracer(A, Sphere((0,0,0), 1))', 'Tracer(3)'):
+    for t in ('f(x) = x^2 - 2x - 3', 'A = (-2, 1)', 'c = Circle(A, 2)', 'Draw(f, A, c)', 'p = Draw(f);', 'p',
+              'Plot(sin(x), 0, pi)', 'Plot3D(x y)', 'Draw(A, Sphere((0,0,0), 1))', 'Draw(3)'):
         s.add_cell(t)
     s.evaluate_all()
     shows = [c.shows_figure for c in s.cells]
@@ -108,9 +122,9 @@ def test_figures():
     assert s.cells[3].labels == ['f', 'A', 'c'] and s.cells[3].latex == ''
     assert 'either 2D or 3D' in s.cells[8].error and 'cannot be drawn' in s.cells[9].error
     # several objects added to one graphic, shown where its name is typed
-    s.add_cell('G = Graphique()')
-    s.add_cell('G.Tracer(f, A)')
-    s.add_cell('G.Courbe(sin(x));')
+    s.add_cell('G = Graphic()')
+    s.add_cell('G.Draw(f, A)')
+    s.add_cell('G.Plot(sin(x));')
     s.add_cell('G.Draw(c)')
     s.add_cell('G')
     s.evaluate_all()
@@ -125,7 +139,7 @@ def test_figures():
 
 
 def test_tables():
-    s = run('g(x) = x^3 - 3x', 'TableauSignes(x^2 - x - 6)', 'TableauVariations(g)', 'جدول_التغيرات(1/x)', 'TableauSignes(sqrt(x) - 1)')
+    s = run('g(x) = x^3 - 3x', 'SignTable(x^2 - x - 6)', 'VariationTable(g)', 'VariationTable(1/x)', 'SignTable(sqrt(x) - 1)')
     st, vt, inv, rt = (c.value for c in s.cells[1:])
     assert isinstance(st, runtime.TableObj) and isinstance(vt, runtime.TableObj)      # they are tables
     assert st.xs == [-sp.oo, -2, 3, sp.oo] and st.rows[-1][1:] == ['', '+', '0', '-', '0', '+', '']
@@ -141,7 +155,7 @@ def test_table_by_rows():
     import json
     from kalam import web
     web.new()
-    web.set_cell(0, 'f(x) = x^2\nT = Tableau(3, 2)\nT.Ligne(x, 1, 2)\nT.Ligne("$f(x)$", f(1), "+")\nT.Ligne(1, 2, 3, 4)\nT\nV = جدول(2)\nV.سطر("-∞", 1)\nV')
+    web.set_cell(0, 'f(x) = x^2\nT = Table(3, 2)\nT.Row(x, 1, 2)\nT.Row("$f(x)$", f(1), "+")\nT.Row(1, 2, 3, 4)\nT\nV = Table(2)\nV.Row("-∞", 1)\nV')
     lines = json.loads(web.state())['lines']
     assert [('table' in ln) for ln in lines] == [False] * 5 + [True] + [False] * 2 + [True]
     assert 'columns' in lines[4]['error'] or 'not 4' in lines[4]['error']
@@ -151,7 +165,7 @@ def test_table_by_rows():
     tex = web.export_text('tex', 'fr')
     assert '\\rowcolor{gray!15}$x$ & $1$ & $2$' in tex and 'p{1.5cm}' in tex and '\\usepackage{array,colortbl}' in tex
     # sign/variation tables are tables: rows can be added, cells edited (an arrow moves the values)
-    web.set_cell(0, 'V = TableauVariations(x^2 - 4x)\nV.Ligne("signe", "", "-", "", "-", "")\nV')
+    web.set_cell(0, 'V = VariationTable(x^2 - 4x)\nV.Row("signe", "", "-", "", "-", "")\nV')
     web.set_style(2, json.dumps({'cells': {'2,3': '$-4$ (min)', '2,2': '↗'}}))
     tex = web.export_text('tex', 'fr')
     assert '\\tkzTabVar{-/ $+\\infty$, +/ $-4\\text{ (min)}$, +/ $+\\infty$}' in tex and "\\tkzTabLine{, -, t, -, }" in tex
@@ -159,7 +173,7 @@ def test_table_by_rows():
     assert 't style/.style={style=solid}' in web.export_text('tex', 'fr')
     arrows = [c['ar'] for c in json.loads(web.state())['lines'][2]['table']['rows'][3] if 'ar' in c]
     assert arrows == ['-', '-']             # x^2-4x with its ↗ edited to ↘: two arrows down
-    web.set_cell(0, 'TableauSignes((x - 1)/(x + 2))')
+    web.set_cell(0, 'SignTable((x - 1)/(x + 2))')
     web.set_style(0, json.dumps({'factors': False, 'dots': False}))
     assert len(json.loads(web.state())['lines'][0]['table']['rows']) == 2
     assert '\\tkzTabLine{, +, d, -, z, +, }' in web.export_text('tex', 'fr')
@@ -198,7 +212,7 @@ def test_web_bridge():
     import io
     from kalam import web
     web.new()
-    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nTracer(f, A, D)\nGraphe3D(x y)')
+    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nDraw(f, A, D)\nPlot3D(x y)')
     lines = json.loads(web.state())['lines']
     assert [('figure' in ln) for ln in lines] == [False, False, False, True, True]     # only drawing commands
     fig = lines[3]['figure']
@@ -213,7 +227,7 @@ def test_web_bridge():
     # figure options: kept in the file, when the line is edited unchanged, and used by the tkz export
     web.set_style(3, json.dumps({'grid': False, 'objs': {'f': {'color': '#ff0000', 'dash': True}, 'D': {'hide': True}}}))
     web.load_klm_text(web.klm_text())
-    web.set_cell(0, 'f(x) = x^2\nA = (3, 5)\nD = x^2 + y^2 < 4\nTracer(f, A, D)\nGraphe3D(x y)')
+    web.set_cell(0, 'f(x) = x^2\nA = (3, 5)\nD = x^2 + y^2 < 4\nDraw(f, A, D)\nPlot3D(x y)')
     assert json.loads(web.state())['lines'][3]['figure']['style']['objs']['f'] == {'color': '#ff0000', 'dash': True}
     fig = web.export_text('fig', 'fr')
     assert 'tkzGrid' not in fig and 'red,255;green,0;blue,0},dashed]' in fig
