@@ -154,8 +154,10 @@ def to_latex(session, lang='fr'):
             body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(pic))
         elif c.shows_figure:
             body.append('% 3D figure: not exported')
-        elif isinstance(c.value, (runtime.SignTableObj, runtime.VariationTableObj)) and c.latex:
-            body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(c.value.tkztab()))
+        elif c.shows_table:
+            v = c.value
+            tab = v.tabular(c.style) if isinstance(v, runtime.TableObj) else v.tkztab(c.style)
+            body.append('\\begin{center}\n%s\n\\end{center}' % '\n'.join(tab))
         elif c.error:
             body.append('\\[\\text{\\textcolor{red}{%s}}\\]' % _tex_text(c.error))
         elif c.latex:
@@ -164,6 +166,8 @@ def to_latex(session, lang='fr'):
         '\\usepackage{tkz-fct}\n\\usepackage{tkz-euclide}\n' if any('tkzInit[' in b for b in body) else ''
     if any('tkzTabInit' in b for b in body):
         figures += '\\usepackage{tkz-tab}\n'
+    if any('\\begin{tabular}' in b for b in body):
+        figures += '\\usepackage{array,colortbl}\n'
     return ('\\documentclass[11pt]{article}\n\\usepackage{amsmath,amssymb,xcolor}\n'
             '\\usepackage[margin=2cm]{geometry}\n' + figures + _PREAMBLE.get(lang, '') +
             '\\begin{document}\n\n' + '\n'.join(body) + '\n\\end{document}\n')

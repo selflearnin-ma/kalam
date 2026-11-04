@@ -263,6 +263,11 @@ class Cell:
         return isinstance(self.value, runtime.Figure) and not self.name and not self.silent and not self.error
 
     @property
+    def shows_table(self):
+        """The line's output is a table: Tableau(...), TableauSignes(...), TableauVariations(...) or the name of one."""
+        return isinstance(self.value, runtime.TABLES) and not self.name and not self.silent and not self.error
+
+    @property
     def is_free_point(self):
         m = _DEF.match(self.text.partition('#')[0]) if self.kind == 'math' else None
         if not m or m.group(2) is not None:
@@ -383,8 +388,11 @@ class Session:
 
     def _evaluate_math(self, c, code):
         m = _METHOD.match(code)
-        if m and isinstance(self.env.get(m.group(1)), runtime.Figure):   # G.Draw(f, A) means G = Draw(G, Draw(f, A))
+        obj = self.env.get(m.group(1)) if m else None
+        if isinstance(obj, runtime.Figure):            # G.Draw(f, A) means G = Draw(G, Draw(f, A))
             code = '%s = Draw(%s, %s(%s))' % (m.group(1), m.group(1), m.group(2), m.group(3))
+        elif isinstance(obj, runtime.TableObj):        # T.Ligne(a, b) means T = Ligne(T, a, b)
+            code = '%s = %s(%s%s)' % (m.group(1), m.group(2), m.group(1), ', ' + m.group(3) if m.group(3).strip() else '')
         m = _DEF.match(code)
         if m and m.group(3) == '=' and m.group(1) in EQUATION_VARS and not m.group(2):
             m = None                                   # y = 2x+1 is an equation
@@ -582,7 +590,7 @@ def function_latex(name, f):
 
 def display_latex(v):
     """LaTeX of a result: the value only, never a "name =" label (the input line shows the name)."""
-    if v is None or isinstance(v, runtime.Figure):      # a figure is drawn, not written
+    if v is None or isinstance(v, (runtime.Figure,) + runtime.TABLES):      # figures and tables have their own view
         return ''
     if isinstance(v, sp.Lambda):
         return sp.latex(v.expr)

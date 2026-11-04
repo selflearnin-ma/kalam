@@ -133,6 +133,25 @@ def test_tables():
     assert '\\usepackage{tkz-tab}' in tex and tex.count('tkzTabInit') == 4 and 'tkz-fct' not in tex
 
 
+def test_table_by_rows():
+    import json
+    from kalam import web
+    web.new()
+    web.set_cell(0, 'f(x) = x^2\nT = Tableau(3, 2)\nT.Ligne(x, 1, 2)\nT.Ligne("$f(x)$", f(1), "+")\nT.Ligne(1, 2, 3, 4)\nT\nV = جدول(2)\nV.سطر("-∞", 1)\nV')
+    lines = json.loads(web.state())['lines']
+    assert [('table' in ln) for ln in lines] == [False] * 5 + [True] + [False] * 2 + [True]
+    assert 'columns' in lines[4]['error'] or 'not 4' in lines[4]['error']
+    rows = lines[5]['table']['rows']
+    assert [c['t'] for c in rows[1]] == ['f(x)', '1', '+'] and lines[8]['table']['rows'][0][0]['t'] == '-\\infty'
+    web.set_style(5, json.dumps({'borders': 'outer', 'headrow': True, 'colw': 1.5}))
+    tex = web.export_text('tex', 'fr')
+    assert '\\rowcolor{gray!15}$x$ & $1$ & $2$' in tex and 'p{1.5cm}' in tex and '\\usepackage{array,colortbl}' in tex
+    web.set_cell(0, 'TableauSignes((x - 1)/(x + 2))')
+    web.set_style(0, json.dumps({'factors': False, 'dots': False}))
+    assert len(json.loads(web.state())['lines'][0]['table']['rows']) == 2
+    assert '\\tkzTabLine{, +, d, -, z, +, }' in web.export_text('tex', 'fr')
+
+
 def test_cells_of_several_lines():
     s = Session()
     b = s.insert_block(0, 'f(x) = x^2 - 2x - 3\n"Étude de $f$ : on pose $f(x)={{f(x)}}$."\n# pour moi\nSolve(f(x) = 0, x)\nf(2);')

@@ -139,6 +139,10 @@ def _line_json(c, i):
              text_line=c.is_text, parts=c.parts)
     if c.shows_figure:
         d['figure'] = _figure_json(c, i)
+    if c.shows_table:
+        v = c.value
+        d['table'] = dict(kind='sign' if isinstance(v, runtime.SignTableObj) else 'var' if isinstance(v, runtime.VariationTableObj)
+                          else 'grid', rows=v.grid(c.style), style=c.style or {})
     if c.slider:
         s = c.slider
         d['slider'] = dict(lo=s.lo, hi=s.hi, step=s.step, value=float(c.value))

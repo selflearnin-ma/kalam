@@ -96,6 +96,37 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .adds button { border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); background: none; border-radius: 10px; padding: 8px 14px; color: var(--accent); width: 100%; }
 .adds button:hover { background: var(--accent-soft); border-style: solid; }
 
+/* tables (Tableau, TableauSignes, TableauVariations) */
+.ktab { position: relative; max-width: 100%; overflow-x: auto; padding: 2px 34px 2px 0; align-self: flex-start; }
+.ktab .tset { position: absolute; top: 2px; right: 0; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); opacity: 0; transition: opacity .12s; }
+.ktab:hover .tset, .ktab .tset:focus-visible { opacity: 1; }
+@media (hover: none) { .ktab .tset { opacity: .8; } }
+.ktab .tset svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; vertical-align: middle; }
+table.kt { border-collapse: collapse; font-size: calc(15px * var(--ts, 1)); direction: ltr; background: var(--panel); }
+table.kt td { padding: 5px 8px; text-align: center; white-space: nowrap; border: none; }
+table.kt.sv { border: 1.5px solid var(--ink); }
+table.kt.sv tr + tr td { border-top: 1px solid var(--ink); }
+table.kt.sv td.lab { border-right: 1.5px solid var(--ink); padding-inline: 12px; }
+table.kt.sv td.pt { padding-inline: 2px; min-width: 14px; }
+table.kt.sv td.iv { min-width: var(--cw, 44px); }
+table.kt.sv tr td.vm, table.kt.sv tr td.vb { border-top: none; }
+table.kt.sv td.vt { vertical-align: top; } table.kt.sv td.vb { vertical-align: bottom; }
+table.kt.sv td.vm { font-size: 1.15em; padding-block: 0; }
+table.kt td.dot { background: repeating-linear-gradient(to bottom, var(--ink) 0 2px, transparent 2px 5px) center / 1px 100% no-repeat; }
+table.kt td.dot mjx-container { background: var(--panel); padding-block: 2px; }
+table.kt td.bar { padding: 4px 0; background: linear-gradient(to right, transparent calc(50% - 3px), var(--ink) calc(50% - 3px) calc(50% - 1.6px), transparent calc(50% - 1.6px) calc(50% + 1.6px), var(--ink) calc(50% + 1.6px) calc(50% + 3px), transparent calc(50% + 3px)); }
+table.kt td.bar { min-width: 64px; }
+table.kt td.bar .bv { display: flex; }
+table.kt td.bar .bv span { flex: 1; min-width: 0; }
+table.kt td.bar .bv span:first-child { text-align: right; padding-right: 9px; }
+table.kt td.bar .bv span:last-child { text-align: left; padding-left: 9px; }
+table.kt.gd.b-all td { border: 1px solid var(--ink); }
+table.kt.gd.b-outer { border: 1.5px solid var(--ink); }
+table.kt.gd.b-outer.hr tr:first-child td { border-bottom: 1px solid var(--ink); }
+table.kt.gd td { min-width: var(--cw, 0); }
+table.kt.gd.al-left td { text-align: left; } table.kt.gd.al-right td { text-align: right; }
+table.kt.gd.hr tr:first-child td, table.kt.gd.hc td:first-child { background: var(--accent-soft); font-weight: 600; }
+
 /* figures (output of Tracer, Courbe, Graphe3D) */
 .fig { position: relative; height: 340px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
 .fig.fig3d { height: 400px; }
@@ -340,7 +371,8 @@ function setState(json) {
 function blockText(b) { return S.blocks[b].lines.map(i => S.cells[i].text).join('\n'); }
 function renderNotebook() {
   figs.forEach(f => f.destroy()); figs.clear();
-  if ($('#dFig').open && !(S.cells[figLine] || {}).figure) $('#dFig').close();   // its figure is gone
+  tabEls.clear();
+  if ($('#dFig').open && !(S.cells[figLine] && (S.cells[figLine].figure || S.cells[figLine].table))) $('#dFig').close();   // its figure is gone
   const nb = $('#nb'); nb.textContent = '';
   S.blocks.forEach((b, k) => nb.appendChild(cellEl(k)));
   const adds = document.createElement('div'); adds.className = 'adds';
@@ -376,6 +408,8 @@ function cellEl(k) {
       const d = document.createElement('div'); d.className = 'err'; d.dir = 'ltr'; d.textContent = `⚠ ${c.text} : ${c.error}`; body.appendChild(d); shown++;
     } else if (c.figure) {
       body.appendChild(figureEl(i)); shown++;
+    } else if (c.table) {
+      body.appendChild(tableEl(i)); shown++;
     } else if (c.latex) {
       const out = document.createElement('div'); out.className = 'out'; out.dir = 'ltr'; out.appendChild(tex(c.latex)); body.appendChild(out); shown++;
     }
@@ -437,7 +471,7 @@ function editKey(e, k, ed) {
 }
 $('#nb').onclick = e => {
   if (e.target.closest('.edrow')) return;     // clicks in the editor (text box, ✓) must not reopen it
-  if (e.target.closest('.fig, .fig3d, input[type=range]')) return;   // zoom buttons, pan, drag and sliders work on the figure only
+  if (e.target.closest('.fig, .fig3d, .ktab .tset, input[type=range]')) return;   // zoom buttons, pan, drag and sliders work on the figure only
   if (e.target.closest('[data-add]')) { const n = S.blocks.length; apply(call('insert_cell', n, '')); startEdit(n); return; }
   const cell = e.target.closest('.cell'); if (!cell) return;
   const k = +cell.dataset.b, act = e.target.closest('[data-act]');
@@ -531,6 +565,33 @@ function toggleBtns(z) {
   const open = z.parentNode.classList.toggle('collapsed') === false;
   z.setAttribute('aria-expanded', open); z.textContent = open ? '×' : '⋯';
   return true;
+}
+// a table drawn from the rows the engine sends: [{t: LaTeX, t2?, k: kind, rs?}]
+const tabEls = new Map();      // line index -> table element on screen
+function tableEl(i) {
+  const T = S.cells[i].table, st = T.style || {}, box = document.createElement('div');
+  box.className = 'ktab'; box.dataset.line = i;
+  const tb = document.createElement('table');
+  tb.className = 'kt ' + (T.kind === 'grid' ? `gd b-${st.borders || 'all'} al-${st.align || 'center'}${st.headrow ? ' hr' : ''}${st.headcol ? ' hc' : ''}` : 'sv');
+  if (st.size) tb.style.setProperty('--ts', st.size / 100);
+  if (st.colw) tb.style.setProperty('--cw', Math.round(st.colw * 38 * (T.kind === 'grid' ? 1 : 0.6)) + 'px');
+  for (const row of T.rows) {
+    const rw = tb.insertRow();
+    for (const c of row) {
+      const td = rw.insertCell(); td.className = c.k; if (c.rs) td.rowSpan = c.rs;
+      if (c.k === 'lab' && st.lgt) td.style.minWidth = Math.round(st.lgt * 38) + 'px';
+      if (c.k.startsWith('bar')) {
+        const bv = document.createElement('div'); bv.className = 'bv';
+        for (const t of [c.t, c.t2]) { const sp = document.createElement('span'); if (t) sp.appendChild(tex(t)); bv.appendChild(sp); }
+        td.appendChild(bv);
+      } else if (c.t) td.appendChild(tex(c.t));
+    }
+  }
+  box.appendChild(tb);
+  box.insertAdjacentHTML('beforeend', `<button class="tset" aria-label="${esc(tr('tab_props'))}" title="${esc(tr('tab_props'))}">${GEAR}</button>`);
+  box.querySelector('.tset').onclick = () => tabPanel(i);
+  tabEls.set(i, box);
+  return box;
 }
 function figureEl(i) {
   const box = document.createElement('div');
@@ -809,8 +870,9 @@ function fig3d(box, line) {
 
 // ------------------------------------------------------------------ figure properties panel (non-modal: the figure stays visible)
 let figLine = -1;
+let panelKind = 'figure';
 function figPanel(line) {
-  figLine = line; const d = $('#dFig'), F = S.cells[line].figure, st = F.style || {}, is2 = F.dim === 2;
+  figLine = line; panelKind = 'figure'; const d = $('#dFig'), F = S.cells[line].figure, st = F.style || {}, is2 = F.dim === 2;
   const num = (k, ph) => `<input type="number" data-k="${k}" value="${st[k] ?? ''}" placeholder="${esc(ph)}">`;
   const txt = (k, ph) => `<input type="text" data-k="${k}" value="${esc(st[k] ?? '')}" placeholder="${esc(ph)}">`;
   const chk = (k, t) => `<label><input type="checkbox" data-k="${k}" ${st[k] !== false ? 'checked' : ''}>${esc(tr(t))}</label>`;
@@ -837,6 +899,35 @@ function figPanel(line) {
   $('#figReset').onclick = () => { setFigStyle({}); figPanel(line); };
   if (!d.open) d.show();
 }
+function tabPanel(line) {
+  figLine = line; panelKind = 'table';
+  const d = $('#dFig'), T = S.cells[line].table, st = T.style || {};
+  const num = (k, ph, min, max, step) => `<input type="number" data-k="${k}" value="${st[k] ?? ''}" placeholder="${esc(ph)}" min="${min}" max="${max}" step="${step}">`;
+  const chk = (k, t, def) => `<label><input type="checkbox" data-k="${k}" data-def="${def}" ${(st[k] ?? def) ? 'checked' : ''}>${esc(tr(t))}</label>`;
+  const sel = (k, opts) => `<select data-k="${k}" class="btn">${opts.map(([v, t]) => `<option value="${v}" ${(st[k] || opts[0][0]) === v ? 'selected' : ''}>${esc(tr(t))}</option>`).join('')}</select>`;
+  let h = `<div class="row"><h2>${esc(tr('tab_props'))}</h2><div class="spacer"></div><button class="btn" data-close>${esc(tr('close'))}</button></div><div class="fp">
+    <span>${esc(tr('tab_colw'))}</span>${num('colw', tr('fig_auto'), 0.3, 15, 0.1)}<span></span>
+    ${T.kind === 'grid' ? '' : `<span>${esc(tr('tab_lgt'))}</span>${num('lgt', tr('fig_auto'), 0.3, 15, 0.1)}<span></span>`}
+    <span>${esc(tr('tab_size'))}</span>${num('size', '100', 50, 250, 10)}<span></span>`;
+  if (T.kind === 'grid') h += `<span>${esc(tr('tab_borders'))}</span>${sel('borders', [['all', 'tab_all'], ['outer', 'tab_outer'], ['none', 'tab_none']])}<span></span>
+    <span>${esc(tr('tab_align'))}</span>${sel('align', [['center', 'tab_center'], ['left', 'tab_left'], ['right', 'tab_right']])}<span></span>
+    <span></span>${chk('headrow', 'tab_headrow', false)}<span></span><span></span>${chk('headcol', 'tab_headcol', false)}<span></span>`;
+  else h += (T.kind === 'sign' ? `<span></span>${chk('factors', 'tab_factors', true)}<span></span>` : '') + `<span></span>${chk('dots', 'tab_dots', true)}<span></span>`;
+  h += `</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
+  $('#figBody').innerHTML = h;
+  $('#figReset').onclick = () => { setFigStyle({}); tabPanel(line); };
+  if (!d.open) d.show();
+}
+function readTabPanel() {
+  const st = {};
+  $('#figBody').querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    if (el.type === 'checkbox') { if (el.checked !== (el.dataset.def === 'true')) st[k] = el.checked; }
+    else if (el.tagName === 'SELECT') { if (el.selectedIndex > 0) st[k] = el.value; }
+    else if (el.value !== '' && isFinite(+el.value) && +el.value >= +el.min && +el.value <= +el.max) st[k] = +el.value;
+  });
+  return st;
+}
 // read the panel back into a style (defaults left out, so files stay small)
 function readFigPanel() {
   const st = {}, n = v => v === '' ? null : +v;
@@ -862,10 +953,12 @@ function readFigPanel() {
 function setFigStyle(st) {
   setState(call('set_style', figLine, JSON.stringify(st)));
   const f = figs.get(figLine); if (f) f.update();
+  const t = tabEls.get(figLine); if (t && S.cells[figLine].table) t.replaceWith(tableEl(figLine));
   scheduleSave(); touched();
 }
-$('#figBody').addEventListener('input', () => setFigStyle(readFigPanel()));
-$('#figBody').addEventListener('change', () => setFigStyle(readFigPanel()));
+const readPanel = () => panelKind === 'table' ? readTabPanel() : readFigPanel();
+$('#figBody').addEventListener('input', () => setFigStyle(readPanel()));
+$('#figBody').addEventListener('change', () => setFigStyle(readPanel()));
 
 // ------------------------------------------------------------------ files & export
 function confirmBox(msg, yes) {

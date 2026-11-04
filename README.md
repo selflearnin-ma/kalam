@@ -98,6 +98,12 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   `‖` where it is not defined); `TableauVariations(f)` gives the sign of f′ and the variations of f with its
   values, limits at ±∞ and on each side of a forbidden value. Coefficients must be numbers (a slider works).
   In the LaTeX export they become `tkz-tab` tables.
+- **Your own tables**, built like graphics: `T = Tableau(5, 2)` (5 columns, 2 empty rows), then
+  `T.Ligne(x, -1, 0, 1, 2)`, `T.Ligne("$f(x)$", f(-1), f(0), f(1), f(2))` fill the rows (a row is added when
+  none is empty); the line `T` shows it. Text cells: `"+"`, `"-"`, `"0"`, `"||"`, `"↗"`, `"↘"` become signs and
+  arrows, `"$…$"` is a formula. English: `Table` / `T.Row(…)`; Arabic: `جدول` / `T.سطر(…)`.
+- The ⚙ button of a table (on hover): column width (cm), first column, text size, borders, alignment,
+  header row/column; for sign/variation tables also factor rows and dotted lines. Used by the LaTeX export.
 - The ⋯ button of a figure shows its zoom +, −, ⌂ and ⚙ buttons.
 
 ### Input language

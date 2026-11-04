@@ -569,22 +569,57 @@ class SignTableObj:
         lines += ['%s & %s' % (lab, ' & '.join(mark[c] for c in cells)) for lab, cells in self.rows]
         return '\\begin{array}{|c|%s|}\\hline %s \\\\ \\hline\\end{array}' % ('c' * (2 * n - 1), ' \\\\ \\hline '.join(lines))
 
-    def tkztab(self):
-        rows = ', '.join('$%s$/1' % lab for lab, _ in self.rows)
+    def shown_rows(self, style=None):
+        return self.rows if (style or {}).get('factors', True) else self.rows[-1:]
+
+    def tkztab(self, style=None):
+        st = style or {}
+        rows = self.shown_rows(st)
         code = {'+': '+', '-': '-', 'z': 'z', 'd': 'd', '': '', '0': 'z'}
         out = ['\\begin{tikzpicture}',
-               '\\tkzTabInit[espcl=2]{$%s$/1, %s}{%s}' % (sp.latex(self.var), rows, ', '.join('$%s$' % _tex_x(p) for p in self.xs))]
-        out += ['\\tkzTabLine{%s}' % ', '.join(_tab_line(cells, code)) for _, cells in self.rows]
+               '\\tkzTabInit[%s]{$%s$/1, %s}{%s}' % (_tab_opts(st), sp.latex(self.var), ', '.join('$%s$/1' % lab for lab, _ in rows),
+                                                   ', '.join('$%s$' % _tex_x(p) for p in self.xs))]
+        out += ['\\tkzTabLine{%s}' % ', '.join(_tab_line(cells, code, st)) for _, cells in rows]
         return out + ['\\end{tikzpicture}']
+
+    def grid(self, style=None):
+        """Rows of cells for the screen: {'t': LaTeX, 'k': kind} (lab, head, pt, iv, bar, dot)."""
+        st = style or {}
+        out = [[{'t': sp.latex(self.var), 'k': 'lab'}] + [{'t': _tex_x(p) if p is not None else '', 'k': 'head'} for p in _spread(self.xs)]]
+        for lab, cells in self.shown_rows(st):
+            out.append([{'t': lab, 'k': 'lab'}] + [_grid_cell(c, k, len(cells), st) for k, c in enumerate(cells)])
+        return out
 
     def __str__(self):
         return '\n'.join('%-12s %s' % (lab, ' '.join(c or '.' for c in cells)) for lab, cells in
                          [(str(self.var), [str(p) if k % 2 == 0 else '' for k, p in enumerate(_spread(self.xs))])] + self.rows)
 
 
-def _tab_line(cells, code):
-    """tkz-tab codes of a row; an interior point with no mark gets a dotted line (t)."""
-    return [code[c] or ('t' if 0 < k < len(cells) - 1 and k % 2 == 0 else '') for k, c in enumerate(cells)]
+def _tab_line(cells, code, style=None):
+    """tkz-tab codes of a row; an interior point with no mark gets a dotted line (t) unless style dots is off."""
+    dots = (style or {}).get('dots', True)
+    return [code[c] or ('t' if dots and 0 < k < len(cells) - 1 and k % 2 == 0 else '') for k, c in enumerate(cells)]
+
+
+def _tab_opts(style):
+    """tkzTabInit options: espcl (space between two x values) and lgt (first column), in cm."""
+    st = style or {}
+    num = lambda k, d: float(st[k]) if isinstance(st.get(k), (int, float)) and 0.3 <= st[k] <= 15 else d
+    return 'espcl=%s,lgt=%s' % (_fmt_cm(num('colw', 2)), _fmt_cm(num('lgt', 2)))
+
+
+def _fmt_cm(v):
+    return ('%.2f' % v).rstrip('0').rstrip('.')
+
+
+def _grid_cell(c, k, n, style):
+    """Screen cell of a sign row: interval sign, or a point mark (0, forbidden value, dotted line)."""
+    if k % 2:
+        return {'t': {'+': '+', '-': '-', '0': '0'}.get(c, c), 'k': 'iv'}
+    if c == 'd':
+        return {'t': '', 'k': 'bar'}
+    dot = ' dot' if (style or {}).get('dots', True) and 0 < k < n - 1 else ''
+    return {'t': '0' if c in ('z', '0') else '', 'k': 'pt' + dot}
 
 
 def _spread(xs):
@@ -665,7 +700,32 @@ class VariationTableObj:
                  ' \\\\ & ' + ' & '.join(bot)]
         return '\\begin{array}{|c|%s|}\\hline %s \\\\ \\hline\\end{array}' % ('c' * cols, ' \\\\ \\hline '.join(lines))
 
-    def tkztab(self):
+    def grid(self, style=None):
+        st, n = style or {}, 2 * len(self.xs) - 1
+        top, mid, bot = [''] * n, [''] * n, [''] * n
+        for k, (kind, a, b) in enumerate(self.vals):
+            c = 2 * k
+            if kind == 'D':
+                for row, s in ((top, '+'), (bot, '-')):        # left | right of the forbidden value
+                    row[c] = ((_tex_x(a) if a is not None and self._pos(k, 'l') == s else ''),
+                              (_tex_x(b) if b is not None and self._pos(k, 'r') == s else ''))
+            else:
+                (top if self._point_pos(k) == '+' else bot)[c] = _tex_x(a)
+        for k, s in enumerate(self.dsign):
+            mid[2 * k + 1] = '\\nearrow' if s == '+' else '\\searrow' if s == '-' else '\\rightarrow'
+        bars = {2 * k for k, (kind, _, _) in enumerate(self.vals) if kind == 'D'}
+        v = sp.latex(self.var)
+        out = [[{'t': v, 'k': 'lab'}] + [{'t': _tex_x(p) if p is not None else '', 'k': 'head'} for p in _spread(self.xs)],
+               [{'t': "%s'(%s)" % (self.name, v), 'k': 'lab'}] + [_grid_cell(c, k, n, st) for k, c in enumerate(self.fp)]]
+        for r, row in enumerate((top, mid, bot)):
+            lab = [{'t': '%s(%s)' % (self.name, v), 'k': 'lab', 'rs': 3}] if r == 0 else []
+            vk = ' vt' if r == 0 else ' vm' if r == 1 else ' vb'
+            out.append(lab + [dict(t=t[0], t2=t[1], k='bar' + vk) if isinstance(t, tuple) else
+                              {'t': t, 'k': ('bar' if k in bars else 'iv' if k % 2 else 'pt') + vk} for k, t in enumerate(row)])
+        return out
+
+    def tkztab(self, style=None):
+        st = style or {}
         v, xs = sp.latex(self.var), self.xs
         code = {'+': '+', '-': '-', 'z': 'z', 'd': 'd', '': ''}
         var = []
@@ -680,9 +740,9 @@ class VariationTableObj:
             else:
                 var.append('%s/ $%s$' % (self._point_pos(k), _tex_x(a)))
         return ['\\begin{tikzpicture}',
-                "\\tkzTabInit[espcl=2]{$%s$/1, $%s'(%s)$/1, $%s(%s)$/2}{%s}" % (
-                    v, self.name, v, self.name, v, ', '.join('$%s$' % _tex_x(p) for p in xs)),
-                '\\tkzTabLine{%s}' % ', '.join(_tab_line(self.fp, code)),
+                "\\tkzTabInit[%s]{$%s$/1, $%s'(%s)$/1, $%s(%s)$/2}{%s}" % (
+                    _tab_opts(st), v, self.name, v, self.name, v, ', '.join('$%s$' % _tex_x(p) for p in xs)),
+                '\\tkzTabLine{%s}' % ', '.join(_tab_line(self.fp, code, st)),
                 '\\tkzTabVar{%s}' % ', '.join(var),
                 '\\end{tikzpicture}']
 
@@ -700,3 +760,85 @@ def SignTable(f, var=None):
 def VariationTable(f):
     """VariationTable(f): sign of f' and variations of f, with values and limits."""
     return VariationTableObj(f)
+
+
+# ---------------------------------------------------------------- tables built row by row
+_MARKS = {'+': '+', '-': '-', '0': '0', '||': '\\|', '|': '|', '/': '\\nearrow', '\\': '\\searrow',
+          '↗': '\\nearrow', '↘': '\\searrow', '->': '\\rightarrow', '': '',
+          'oo': '+\\infty', '+oo': '+\\infty', '-oo': '-\\infty'}     # ∞ in a text was already written oo
+
+
+def cell_tex(v):
+    """LaTeX of one table cell: a value, or text ("+", "-", "0", "||", "↗", "↘" are drawn as signs and arrows)."""
+    if v is None:
+        return ''
+    if isinstance(v, str):
+        if v.strip() in _MARKS:
+            return _MARKS[v.strip()]
+        # text, with $...$ parts as formulas: "Valeur de $f(x)$"
+        parts = v.split('$')
+        clean = lambda t: t.replace('\\', '').replace('{', '').replace('}', '')
+        return ''.join(p if k % 2 else ('\\text{%s}' % clean(p) if p else '') for k, p in enumerate(parts))
+    return _tex_x(v) if isinstance(v, sp.Basic) else sp.latex(v)
+
+
+class TableObj:
+    """A table of `ncols` columns: T = Table(3, 2) then T.Row(a, b, c) fills the next row."""
+    def __init__(self, ncols, rows):
+        self.ncols, self.rows = ncols, rows
+
+    def _latex(self, printer=None):
+        return r'\text{[table]}'
+
+    def grid(self, style=None):
+        return [[{'t': cell_tex(c), 'k': 'g'} for c in r] for r in self.rows]
+
+    def tabular(self, style=None):
+        """The table as a LaTeX tabular (math cells), following its options."""
+        st = style or {}
+        b = st.get('borders', 'all')
+        w = st.get('colw') if isinstance(st.get('colw'), (int, float)) and 0.3 <= st['colw'] <= 15 else None
+        al = {'left': 'l', 'right': 'r'}.get(st.get('align'), 'c')
+        col = '>{%s\\arraybackslash}p{%scm}' % ({'l': '\\raggedright', 'r': '\\raggedleft'}.get(al, '\\centering'), _fmt_cm(w)) if w else al
+        sep = '|' if b == 'all' else ''
+        spec = ('|' if b != 'none' else '') + sep.join([col] * self.ncols) + ('|' if b != 'none' else '')
+        out = ['\\begin{tabular}{%s}' % spec] + (['\\hline'] if b != 'none' else [])
+        for k, r in enumerate(self.rows):
+            cells = [('$%s$' % cell_tex(c)) if cell_tex(c) else '' for c in r]
+            if st.get('headcol') and cells:
+                cells[0] = '\\cellcolor{gray!15}' + cells[0]
+            line = ('\\rowcolor{gray!15}' if st.get('headrow') and k == 0 else '') + ' & '.join(cells) + ' \\\\'
+            if b == 'all' or (b == 'outer' and (k == len(self.rows) - 1 or (k == 0 and st.get('headrow')))):
+                line += ' \\hline'
+            out.append(line)
+        return out + ['\\end{tabular}']
+
+    def __str__(self):
+        return '\n'.join(' | '.join('' if c is None else str(c) for c in r) for r in self.rows)
+
+
+def Table(columns, rows=0):
+    """Table(columns, rows): an empty table; add its rows with T.Row(a, b, ...)."""
+    n = int(columns)
+    if n < 1 or n > 40:
+        raise ValueError('a table has 1 to 40 columns')
+    return TableObj(n, [[None] * n for _ in range(int(rows))])
+
+
+def Row(table, *cells):
+    """Row(T, a, b, ...) — written T.Row(a, b, ...): fills the first empty row of T, or adds one."""
+    if not isinstance(table, TableObj):
+        raise ValueError('Row(...) adds a row to a table: T = Table(3) then T.Row(a, b, c)')
+    if len(cells) > table.ncols:
+        raise ValueError('this table has %d columns, not %d' % (table.ncols, len(cells)))
+    row = list(cells) + [None] * (table.ncols - len(cells))
+    rows = [list(r) for r in table.rows]          # a new table: the cells before this one keep theirs
+    k = next((i for i, r in enumerate(rows) if all(c is None for c in r)), None)
+    if k is None:
+        rows.append(row)
+    else:
+        rows[k] = row
+    return TableObj(table.ncols, rows)
+
+
+TABLES = (TableObj, SignTableObj, VariationTableObj)
