@@ -83,7 +83,7 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   The same for space: `H = Graphic3D()`, then `H.Plot3D(x y)`, `H.Draw(Sphere((0,0,0), 1))`, then `H`.
   3D figures use WebGL (Plotly); where WebGL is missing (some Linux web views) a simpler canvas view is used
   instead (drag to turn, wheel to zoom). It can also be chosen in the figure's ⚙ options ("Rendu 3D").
-  The ⚙ button opens the figure's properties: width, height, axes, grid, x/y window, tick step (`1`, `0.5`,
+  The ⚙ button opens the figure's properties: width, height, axes, grid, numbers on the axes, x/y window, tick step (`1`, `0.5`,
   `pi/2` for labels in π), and for each object its label text (`C_f` shows f as a subscript, `$\mathcal{C}_f$`
   is drawn as a formula), colour, label
   on/off, thickness, dashes, visible. They are saved with
@@ -92,8 +92,8 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   is rewritten. Figures are exported to LaTeX (tkz) in place.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and
   goes to the next cell; the **✓** button evaluates (phones). Cells after an edited one recompute.
-- **Fichier** menu: New (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Save as (Ctrl+Shift+S), Export (Ctrl+E), commands
-  editor. In the apps Save writes back to the opened file; in a browser it downloads the `.klm`.
+- **Fichier** menu: New (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Save as (Ctrl+Shift+S), Export (Ctrl+E);
+  the **Commandes** button opens the commands editor. In the apps Save writes back to the opened file; in a browser it downloads the `.klm`.
 - Typing `(` `[` `{` `"` adds the closing one; typing the closing one steps over it; Backspace on an empty pair
   removes both.
 - **Clavier** tab: x, y, □², □^□, □/□, √□, ⁿ√□, |□|, π, e, ∞, ≤, sin, ln… inserted at the cursor, cursor left inside the box.

@@ -349,7 +349,7 @@ def tikz_picture(items, labels, window, style=None):
     out = ['\\begin{tikzpicture}[scale=%s]' % fmt(scale),
            '\\tkzInit[xmin=%d,xmax=%d,ymin=%d,ymax=%d]' % (xmin, xmax, ymin, ymax),
            ] + (['\\tkzGrid[color=gray!25]'] if st.get('grid', True) else []) + (
-           ['\\tkzAxeXY'] if st.get('axes', True) else []) + ['\\tkzClip[space=.5]']
+           [('\\tkzAxeXY' if st.get('nums', True) else '\\tkzDrawXY')] if st.get('axes', True) else []) + ['\\tkzClip[space=.5]']   # tkzDrawXY: axes without numbers
     out += defs + draws + fcts
     for o in dict.fromkeys(o for _, o in pts):      # points grouped by colour
         out.append('\\tkzDrawPoints%s(%s)' % (o, ','.join(n for n, oo in pts if oo == o)))

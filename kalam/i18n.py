@@ -77,6 +77,7 @@ STRINGS = {
     'fig_height': ('Hauteur', 'الارتفاع', 'Height'),
     'fig_axes': ('Axes', 'المحاور', 'Axes'),
     'fig_grid': ('Grille', 'الشبكة', 'Grid'),
+    'fig_nums': ('Nombres sur les axes', 'الأعداد على المحاور', 'Numbers on the axes'),
     'fig_from': ('de', 'من', 'from'),
     'fig_to': ('à', 'إلى', 'to'),
     'fig_unit': ('Graduation', 'التدريج', 'Tick step'),
