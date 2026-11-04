@@ -104,6 +104,8 @@ STRINGS = {
     'tab_headcol': ('1re colonne en en-tête', 'العمود الأول عنوان', 'First column as header'),
     'tab_factors': ('Lignes des facteurs', 'أسطر العوامل', 'Factor rows'),
     'tab_dots': ('Pointillés aux valeurs', 'خطوط منقطة', 'Dotted lines'),
+    'tab_row': ('Ligne', 'السطر', 'Row'),
+    'fig_tools': ('Outils du graphique', 'أدوات الرسم', 'Graphic tools'),
     'tab_cells': ('Contenu des cellules', 'محتوى الخلايا', 'Cell contents'),
     'tab_cells_hint': ('Valeurs en $…$ (ex. $\\frac{1}{2}$), signes + - 0 ||, flèches ↗ ↘, ou texte. « a || b » de part et d’autre d’une double barre.',
                        'القيم بين $…$ (مثلا $\\frac{1}{2}$)، الإشارات + - 0 ||، الأسهم ↗ ↘، أو نص. « a || b » على جانبي الخط المزدوج.',

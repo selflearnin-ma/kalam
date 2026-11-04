@@ -98,7 +98,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 /* tables (Tableau, TableauSignes, TableauVariations) */
 .ktab { position: relative; max-width: 100%; overflow-x: auto; padding: 2px 34px; align-self: center; }
-.cedit { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.cedit { display: grid; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.crow { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px 8px; border: 1px solid var(--line); border-radius: 9px; }
+.ctitle { font-size: 12px; font-weight: 600; color: var(--muted); }
+#figBody .crow + .crow { margin-top: -4px; }
+.vbtns [data-z=more] svg { width: 16px; height: 16px; }
 .cedit input { min-width: 0; width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; background: var(--bg); font-family: var(--mono); font-size: 12px; direction: ltr; }
 .cedit input.ed1 { border-color: var(--accent); background: var(--accent-soft); }
 .obj input.otext { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; background: var(--bg); direction: ltr; }
@@ -140,7 +144,7 @@ table.kt.gd.hr tr:first-child td, table.kt.gd.hc td:first-child { background: va
 .vbtns button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; vertical-align: middle; }
 .vbtns button:hover { border-color: var(--accent); color: var(--accent); }
 .vbtns.collapsed button:not([data-z=more]) { display: none; }
-.vbtns [data-z=more] { font-size: 17px; line-height: 1; color: var(--muted); }
+.vbtns [data-z=more] { line-height: 1; color: var(--muted); }
 .fig.fig3d .vbtns { z-index: 3; top: 8px; left: 8px; right: auto; }
 #dFig { position: fixed; inset: 70px max(16px, env(safe-area-inset-right, 0px)) auto auto; margin: 0; width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - 90px); overflow-y: auto; box-shadow: 0 16px 40px rgb(0 0 0 / 0.18); z-index: 45; }
@@ -564,12 +568,34 @@ function piLabel(v) {   // 1.5707… -> π/2
     const num = n === 1 ? '' : n === -1 ? '−' : String(n).replace('-', '−'); return d === 1 ? num + 'π' : num + 'π/' + d; } }
   return String(+v.toPrecision(4));
 }
-// the figure's buttons stay folded behind ⋯ until asked for
+// the figure's buttons stay folded behind one button (a "tune" icon, unlike the ⋯ menu of cells)
+const TUNE = '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>';
+const CLOSE = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function toggleBtns(z) {
   if (z.dataset.z !== 'more') return false;
   const open = z.parentNode.classList.toggle('collapsed') === false;
-  z.setAttribute('aria-expanded', open); z.textContent = open ? '×' : '⋯';
+  z.setAttribute('aria-expanded', open); z.innerHTML = open ? CLOSE : TUNE;
   return true;
+}
+// "$...$" labels of figures: the formula drawn by MathJax, as an image in the label's colour (cached)
+const mathLabels = new Map();
+let labelRedraw = false;
+function mathLabel(text, col) {
+  const key = col + '|' + text;
+  if (mathLabels.has(key)) return mathLabels.get(key);
+  const m = { ok: false, w: 0, h: 0, img: new Image() };
+  mathLabels.set(key, m);
+  if (!window.MathJax || !MathJax.tex2svg) return m;
+  try {
+    const src = text.split('$').map((p, k) => k % 2 ? p : (p ? `\\text{${p.replace(/[{}\\]/g, '')}}` : '')).join('');
+    const svg = MathJax.tex2svg(src, { display: false }).querySelector('svg');
+    const ex = 8;                                // px per ex: about the size of the other labels
+    m.w = parseFloat(svg.getAttribute('width')) * ex; m.h = parseFloat(svg.getAttribute('height')) * ex;
+    svg.setAttribute('width', m.w); svg.setAttribute('height', m.h); svg.setAttribute('style', 'color:' + col);
+    m.img.onload = () => { m.ok = true; if (!labelRedraw) { labelRedraw = true; requestAnimationFrame(() => { labelRedraw = false; figs.forEach(f => f.update()); }); } };
+    m.img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  } catch (e) { /* bad TeX: no label */ }
+  return m;
 }
 // a table drawn from the rows the engine sends: [{t: LaTeX, t2?, k: kind, rs?}]
 const tabEls = new Map();      // line index -> table element on screen
@@ -606,7 +632,7 @@ function figureEl(i) {
   return box;
 }
 function fig2d(box, line) {
-  box.innerHTML = `<canvas></canvas><div class="vbtns collapsed"><button data-z="more" aria-label="⋯" title="⋯" aria-expanded="false">⋯</button><button data-z="in" aria-label="zoom +">+</button><button data-z="out" aria-label="zoom −">−</button><button data-z="home" aria-label="home">⌂</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div><div class="coords"></div>`;
+  box.innerHTML = `<canvas></canvas><div class="vbtns collapsed"><button data-z="more" aria-label="${esc(tr('fig_tools'))}" title="${esc(tr('fig_tools'))}" aria-expanded="false">${TUNE}</button><button data-z="in" aria-label="zoom +">+</button><button data-z="out" aria-label="zoom −">−</button><button data-z="home" aria-label="home">⌂</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div><div class="coords"></div>`;
   const cv = box.querySelector('canvas'), g = cv.getContext('2d'), coords = box.querySelector('.coords');
   const figure = () => S.cells[line] && S.cells[line].figure;
   const winKey = () => { const st = figStyle(line); return ['xmin', 'xmax', 'ymin', 'ymax'].map(k => st[k] ?? '').join(','); };
@@ -682,7 +708,12 @@ function fig2d(box, line) {
     }
     g.stroke();
   }
-  function label(text, x, y, col) {     // "C_f" or "C_{f}": f as a subscript
+  function label(text, x, y, col) {     // "C_f" or "C_{f}": f as a subscript; "$C_f$": a formula
+    if (String(text).includes('$')) {
+      const m = mathLabel(String(text), col);
+      if (m.ok) g.drawImage(m.img, x + 6, y - 6 - m.h, m.w, m.h);
+      return;
+    }
     g.fillStyle = col; g.font = '600 13px ' + css('--font'); g.textAlign = 'left';
     const [main, sub] = String(text).split(/_(.*)/s);
     g.fillText(main, x + 6, y - 8);
@@ -833,7 +864,7 @@ function traces3d(p, col, name) {
   const T = [], u = grid(48, -R3, R3);
   const line = (xs, ys, zs) => T.push({ type: 'scatter3d', mode: 'lines', x: xs, y: ys, z: zs, line: { color: col, width: 5 }, hoverinfo: 'skip' });
   switch (p.k) {
-    case 'pt3': T.push({ type: 'scatter3d', mode: 'markers+text', x: [p.p[0]], y: [p.p[1]], z: [p.p[2]], text: [name || ''], textposition: 'top right', marker: { size: 5, color: col }, textfont: { color: col } }); break;
+    case 'pt3': T.push({ type: 'scatter3d', mode: 'markers+text', x: [p.p[0]], y: [p.p[1]], z: [p.p[2]], text: [(name || '').replace(/\$/g, '')], textposition: 'top right', marker: { size: 5, color: col }, textfont: { color: col } }); break;
     case 'seg3': case 'vec3': line([p.a[0], p.b[0]], [p.a[1], p.b[1]], [p.a[2], p.b[2]]);
       if (p.k === 'vec3') T.push({ type: 'cone', x: [p.b[0]], y: [p.b[1]], z: [p.b[2]], u: [p.b[0] - p.a[0]], v: [p.b[1] - p.a[1]], w: [p.b[2] - p.a[2]], sizemode: 'absolute', sizeref: 0.4, anchor: 'tip', colorscale: [[0, col], [1, col]], showscale: false });
       break;
@@ -858,7 +889,7 @@ function traces3d(p, col, name) {
   return T;
 }
 function fig3d(box, line) {
-  box.innerHTML = `<div class="p3" style="width:100%;height:100%"></div><div class="vbtns collapsed"><button data-z="more" aria-label="⋯" title="⋯" aria-expanded="false">⋯</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div>`;
+  box.innerHTML = `<div class="p3" style="width:100%;height:100%"></div><div class="vbtns collapsed"><button data-z="more" aria-label="${esc(tr('fig_tools'))}" title="${esc(tr('fig_tools'))}" aria-expanded="false">${TUNE}</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div>`;
   const plot = box.querySelector('.p3');
   box.querySelector('.vbtns').onclick = e => { const z = e.target.closest('[data-z]'); if (z && !toggleBtns(z)) figPanel(line); };
   async function draw() {
@@ -926,12 +957,16 @@ function tabPanel(line) {
   else h += (T.kind === 'sign' ? `<span></span>${chk('factors', 'tab_factors', true)}` : '') + `<span></span>${chk('dots', 'tab_dots', true)}`;
   // the cells, as text: values as $LaTeX$, marks + - 0 || ↗ ↘; an edited cell is highlighted
   const ed = st.cells || {}, ncol = Math.max(...T.src.map(r => r.length));
-  h += `</div><h3>${esc(tr('tab_cells'))}</h3><div class="cedit" style="grid-template-columns: repeat(${ncol}, minmax(64px, 1fr))">`;
-  T.src.forEach((row, r) => { for (let c = 0; c < ncol; c++) {
-    const key = r + ',' + c, has = key in ed, v = c < row.length ? (has ? ed[key] : row[c]) : null;
-    h += v === null ? '<span></span>' : `<input data-cell="${key}" data-src="${esc(row[c])}" value="${esc(v)}" class="${has ? 'ed1' : ''}" spellcheck="false" aria-label="${r + 1}, ${c + 1}">`;
-  } });
-  h += `</div><div class="note">${esc(tr('tab_cells_hint'))}</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
+  h += `</div><h3>${esc(tr('tab_cells'))}</h3>`;
+  T.src.forEach((row, r) => {
+    h += `<div class="crow"><div class="ctitle">${esc(tr('tab_row'))} ${r + 1}</div><div class="cedit" style="grid-template-columns: repeat(${ncol}, minmax(64px, 1fr))">`;
+    for (let c = 0; c < ncol; c++) {
+      const key = r + ',' + c, has = key in ed, v = c < row.length ? (has ? ed[key] : row[c]) : null;
+      h += v === null ? '<span></span>' : `<input data-cell="${key}" data-src="${esc(row[c])}" value="${esc(v)}" class="${has ? 'ed1' : ''}" spellcheck="false" aria-label="${esc(tr('tab_row'))} ${r + 1}, ${c + 1}">`;
+    }
+    h += '</div></div>';
+  });
+  h += `<div class="note">${esc(tr('tab_cells_hint'))}</div><div class="row"><button class="btn" id="figReset">${esc(tr('fig_reset'))}</button></div>`;
   $('#figBody').innerHTML = h;
   $('#figReset').onclick = () => { setFigStyle({}); tabPanel(line); };
   if (!d.open) d.show();
