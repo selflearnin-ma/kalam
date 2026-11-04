@@ -51,8 +51,7 @@ header { display: flex; align-items: center; gap: 4px; padding-block: 7px; posit
 #winbtns button:hover { background: color-mix(in srgb, var(--ink) 14%, transparent); }
 #winbtns button[data-win=close]:hover { background: #e5484d; color: #fff; }
 #winbtns svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-body.nonum .cell { grid-template-columns: minmax(0, 1fr) 28px; }
-body.nonum .cell .gut { display: none; }
+body.nonum .cell .gut { visibility: hidden; }   /* the margin stays, only the number goes */
 #langCode { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
 
 /* one column: palette, then the notebook (figures are drawn inside the cells) */

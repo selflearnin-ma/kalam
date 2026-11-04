@@ -64,6 +64,7 @@ BUILTINS = [
     ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'tables', 'x^2 - 4'),
     ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'tables', 'f'),
     ('Graphic', 'Graphique', 'رسم', 'graph2d', ''),
+    ('Graphic3D', None, None, 'graph3d', ''),
     ('Draw', 'Tracer', 'ارسم', 'graph2d', 'f, A, c'),
     ('Plot', 'Courbe', 'منحنى', 'graph2d', 'f, a, b'),
     ('ParametricCurve', 'CourbeParamétrée', 'منحنى_وسيطي', 'graph2d', 'cos(t), sin(t), t, 0, 2pi'),

@@ -374,13 +374,16 @@ class Session:
     def _check_figure(self, c):
         items = c.value.items
         if not items:
-            if c.name:                                 # G = Graphic(): empty until G.Draw(...)
+            if c.name:                                 # G = Graphic() / Graphic3D(): empty until G.Draw(...)
                 return
             raise KalamError('nothing to draw')
         dims = [dimension(i) for i in items]
         bad = [i for i, d in zip(items, dims) if d is None]
         if bad:
             raise KalamError('cannot be drawn: %s' % ', '.join(map(str, bad)))
+        other = [i for i, d in zip(items, dims) if c.value.dim and d != c.value.dim]
+        if other:
+            raise KalamError('a %dD graphic draws %dD objects: %s' % (c.value.dim, c.value.dim, ', '.join(map(str, other[:3]))))
         if len(set(dims)) > 1:
             raise KalamError('a figure is either 2D or 3D, not both')
         names = {id(v): k for k, v in self.env.items() if not k.startswith('_c')}

@@ -134,6 +134,18 @@ def test_figures():
     s.move_point(s.cells[1], 0, 0)
     assert s.cells[-1].value.items[1] == sp.Point(0, 0)
     assert 'G = Draw(G, Draw(c))' in to_python(s)
+    # a 3D graphic is built the same way; each graphic keeps its dimension
+    s.add_cell('H = Graphic3D()')
+    s.add_cell('H.Plot3D(x y)')
+    s.add_cell('H.Draw(Sphere((0, 0, 0), 1))')
+    s.add_cell('H')
+    s.add_cell('H.Draw(f)')
+    s.add_cell('K = Graphic()')
+    s.add_cell('K.Draw(Sphere((0, 0, 0), 1))')
+    s.evaluate_all()
+    h = s.cells[-7:]
+    assert [c.error for c in h[:4]] == [None] * 4 and h[3].shows_figure and len(h[3].value.items) == 2
+    assert 'a 3D graphic draws 3D objects' in h[4].error and 'a 2D graphic draws 2D objects' in h[6].error
     from kalam.export import figure_window
     assert figure_window(s.cells[3].value.items) == [-6, 6, -5, 11]    # A, c and the parabola (|y| <= 10) on [-6, 6]
 

@@ -412,12 +412,14 @@ def Eigenvalues(M):
 
 # ---------------------------------------------------------------- plotting
 class Figure:
-    """What a drawing command shows: the objects to draw (all 2D or all 3D)."""
-    def __init__(self, items):
-        self.items = []
+    """What a drawing command shows: the objects to draw (all 2D or all 3D).
+    dim: 2 or 3 for Graphic() / Graphic3D(), kept when objects are added; None for Draw(...) alone."""
+    def __init__(self, items, dim=None):
+        self.items, self.dim = [], dim
         for i in items:
             if isinstance(i, Figure):
                 self.items += i.items
+                self.dim = self.dim or i.dim
             elif isinstance(i, (list, tuple)):     # e.g. the points of Intersect(...)
                 self.items += list(i)
             else:
@@ -431,8 +433,13 @@ class Figure:
 
 
 def Graphic():
-    """Graphic(): an empty figure; add objects with G.Draw(f, A, ...)."""
-    return Figure([])
+    """Graphic(): an empty 2D figure; add objects with G.Draw(f, A, ...)."""
+    return Figure([], 2)
+
+
+def Graphic3D():
+    """Graphic3D(): an empty 3D figure; add objects with G.Draw(S, P, ...) or G.Plot3D(x y)."""
+    return Figure([], 3)
 
 
 def Draw(*objs):

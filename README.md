@@ -80,6 +80,7 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   `Draw(f, A, c)` (any 2D or 3D objects), `Plot(f, a, b)` (one function), `Plot3D(x^2 - y^2)`.
   To build one figure step by step: `G = Graphic()`, then `G.Draw(f, A)`, `G.Plot(sin(x))`, … (each adds
   to G and shows nothing), then the line `G` shows the figure with all its objects.
+  The same for space: `H = Graphic3D()`, then `H.Plot3D(x y)`, `H.Draw(Sphere((0,0,0), 1))`, then `H`.
   The ⚙ button opens the figure's properties: width, height, axes, grid, x/y window, tick step (`1`, `0.5`,
   `pi/2` for labels in π), and for each object its label text (`C_f` shows f as a subscript, `$\mathcal{C}_f$`
   is drawn as a formula), colour, label
