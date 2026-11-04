@@ -78,9 +78,10 @@ def test_exports():
             'Tracer(f, A, c, T, u)')
     with tempfile.TemporaryDirectory() as d:
         py = os.path.join(d, 'out.py')
-        with open(py, 'w') as f:
+        with open(py, 'w', encoding='utf-8') as f:
             f.write(to_python(s))
-        r = subprocess.run([sys.executable, py], capture_output=True, text=True)
+        r = subprocess.run([sys.executable, py], capture_output=True, text=True, encoding='utf-8',
+                           env=dict(os.environ, PYTHONIOENCODING='utf-8'))   # Windows consoles are cp1252
         assert r.returncode == 0, r.stderr
         assert 'Eq(y, 2*x - 1)' in r.stdout          # tangent at k = 1
         klm = os.path.join(d, 'a.klm')
