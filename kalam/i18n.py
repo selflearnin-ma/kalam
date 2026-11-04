@@ -87,6 +87,8 @@ STRINGS = {
     'fig_dash': ('Pointillés', 'متقطع', 'Dashed'),
     'fig_show': ('Visible', 'ظاهر', 'Visible'),
     'fig_auto': ('auto', 'تلقائي', 'auto'),
+    'fig_r3d': ('Rendu 3D', 'العرض ثلاثي الأبعاد', '3D rendering'),
+    'fig_r3d_simple': ('simple (sans WebGL)', 'بسيط (بدون WebGL)', 'simple (no WebGL)'),
     'fig_reset': ('Réinitialiser', 'إعادة الضبط', 'Reset'),
     'fig_full': ('pleine largeur', 'كامل العرض', 'full width'),
     'tab_props': ('Propriétés du tableau', 'خصائص الجدول', 'Table properties'),

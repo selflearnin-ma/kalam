@@ -946,26 +946,102 @@ function traces3d(p, col, name) {
   }
   return T;
 }
+// 3D without WebGL: the same traces drawn on a 2D canvas (orthographic view, faces sorted back to front).
+// Used when WebGL is missing (some Linux web views) or Plotly fails, or when chosen in the figure's options.
+function webglOK() { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } }
+function canvas3d(host, getTraces, st) {
+  host.innerHTML = '<canvas style="width:100%;height:100%;display:block;touch-action:none;cursor:grab"></canvas>';
+  const cv = host.firstChild, g = cv.getContext('2d');
+  let az = -0.75, el = 0.45, zoom = 1, drag = null;
+  const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ''); const n = m ? parseInt(m[1], 16) : 0x2f5bea; return [n >> 16, (n >> 8) & 255, n & 255]; };
+  function draw() {
+    const w = cv.clientWidth, h = cv.clientHeight, dpr = devicePixelRatio || 1; if (!w || !h) return;
+    cv.width = w * dpr; cv.height = h * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = css('--panel'); g.fillRect(0, 0, w, h);
+    const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(el), se = Math.sin(el), s = Math.min(w, h) / (R3 * 3.6) * zoom;
+    // world (x, y, z up) -> screen + depth
+    const P = (x, y, z) => { const X = x * ca - y * sa, Y = x * sa + y * ca; return [w / 2 + X * s, h / 2 - (z * ce - Y * se) * s, Y * ce + z * se]; };
+    const faces = [], lines = [], dots = [];
+    for (const t of getTraces()) {
+      if (t.type === 'surface') {
+        const col = hex(t.colorscale[0][1]), Z = t.z, n = Z.length, m = Z[0].length;
+        const X = (i, j) => Array.isArray(t.x[0]) ? t.x[i][j] : t.x[j], Y = (i, j) => Array.isArray(t.y[0]) ? t.y[i][j] : t.y[i];
+        for (let i = 0; i < n - 1; i++) for (let j = 0; j < m - 1; j++) {
+          const q = [[i, j], [i, j + 1], [i + 1, j + 1], [i + 1, j]].map(([a, b]) => [X(a, b), Y(a, b), Z[a][b]]);
+          if (q.some(v => v[0] == null || v[1] == null || v[2] == null)) continue;
+          // light from the viewer's side: brightness from the face normal
+          const u = q[1].map((v, k) => v - q[0][k]), v2 = q[3].map((v, k) => v - q[0][k]);
+          const nx = u[1] * v2[2] - u[2] * v2[1], ny = u[2] * v2[0] - u[0] * v2[2], nz = u[0] * v2[1] - u[1] * v2[0], nl = Math.hypot(nx, ny, nz) || 1;
+          const lit = 0.55 + 0.45 * Math.abs((nx * 0.3 + ny * -0.4 + nz * 0.85) / nl);
+          const sp = q.map(v => P(...v));
+          faces.push({ d: sp.reduce((a, v) => a + v[2], 0) / 4, sp, c: col.map(c => Math.round(c * lit)) });
+        }
+      } else if (t.type === 'scatter3d' && t.mode === 'lines') {
+        for (let k = 1; k < t.x.length; k++) if (t.x[k] != null && t.x[k - 1] != null) {
+          const a = P(t.x[k - 1], t.y[k - 1], t.z[k - 1]), b = P(t.x[k], t.y[k], t.z[k]);
+          lines.push({ d: (a[2] + b[2]) / 2, a, b, c: t.line.color });
+        }
+      } else if (t.type === 'scatter3d') {
+        dots.push({ p: P(t.x[0], t.y[0], t.z[0]), c: t.marker.color, t: (t.text || [''])[0] });
+      }
+    }
+    // the box: grid on the three back walls, axes through the origin
+    if (st.axes !== false) {
+      g.lineWidth = 1; g.strokeStyle = css('--grid-major');
+      if (st.grid !== false) for (let k = -R3; k <= R3; k++) for (const [a, b] of [[[k, -R3, -R3], [k, R3, -R3]], [[-R3, k, -R3], [R3, k, -R3]]]) {
+        const A = P(...a), B = P(...b); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke();
+      }
+      g.strokeStyle = css('--axis'); g.fillStyle = css('--muted'); g.font = '12px ' + css('--font');
+      for (const [v, name] of [[[R3, 0, 0], 'x'], [[0, R3, 0], 'y'], [[0, 0, R3], 'z']]) {
+        const A = P(...v.map(c => -c)), B = P(...v); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke(); g.fillText(name, B[0] + 4, B[1] - 4);
+      }
+    }
+    const all = [...faces.map(f => ['f', f]), ...lines.map(l => ['l', l])].sort((a, b) => a[1].d - b[1].d);
+    for (const [k, o] of all) {
+      if (k === 'f') { g.beginPath(); o.sp.forEach((v, i) => i ? g.lineTo(v[0], v[1]) : g.moveTo(v[0], v[1])); g.closePath();
+        g.fillStyle = `rgba(${o.c[0]},${o.c[1]},${o.c[2]},0.9)`; g.fill(); g.strokeStyle = `rgba(${o.c[0]},${o.c[1]},${o.c[2]},0.35)`; g.lineWidth = 0.5; g.stroke(); }
+      else { g.strokeStyle = o.c; g.lineWidth = 2.5; g.beginPath(); g.moveTo(o.a[0], o.a[1]); g.lineTo(o.b[0], o.b[1]); g.stroke(); }
+    }
+    for (const d of dots) { g.fillStyle = d.c; g.beginPath(); g.arc(d.p[0], d.p[1], 4.5, 0, 7); g.fill(); if (d.t) { g.font = '600 13px ' + css('--font'); g.fillText(d.t, d.p[0] + 7, d.p[1] - 7); } }
+  }
+  cv.onpointerdown = e => { drag = [e.clientX, e.clientY, az, el]; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; };
+  cv.onpointermove = e => { if (!drag) return; az = drag[2] - (e.clientX - drag[0]) * 0.01; el = Math.max(-1.5, Math.min(1.5, drag[3] + (e.clientY - drag[1]) * 0.01)); draw(); };
+  cv.onpointerup = cv.onpointercancel = () => { drag = null; cv.style.cursor = 'grab'; };
+  cv.onwheel = e => { e.preventDefault(); zoom = Math.max(0.3, Math.min(5, zoom * Math.exp(-e.deltaY * 0.0015))); draw(); };
+  const ro = new ResizeObserver(draw); ro.observe(cv);
+  return { draw, destroy: () => ro.disconnect() };
+}
 function fig3d(box, line) {
   box.innerHTML = `<div class="p3" style="width:100%;height:100%"></div><div class="vbtns collapsed"><button data-z="more" aria-label="${esc(tr('fig_tools'))}" title="${esc(tr('fig_tools'))}" aria-expanded="false">${TUNE}</button><button data-z="opts" aria-label="${esc(tr('fig_props'))}" title="${esc(tr('fig_props'))}">${GEAR}</button></div>`;
   const plot = box.querySelector('.p3');
   box.querySelector('.vbtns').onclick = e => { const z = e.target.closest('[data-z]'); if (z && !toggleBtns(z)) figPanel(line); };
+  let soft = null;     // the canvas renderer, when it is the one in use
+  const traces = () => {
+    const F = S.cells[line] && S.cells[line].figure, st = (F && F.style) || {}, T = [];
+    if (F) F.items.forEach((it, k) => { const o = objStyle(st, it, k); if (o.hide) return;
+      for (const p of it.scene) { try { T.push(...traces3d(p, o.color, o.label ? o.name : '')); } catch (e) {} } });
+    return T;
+  };
+  const useSoft = st => { if (!soft) { if (window.Plotly) Plotly.purge(plot); soft = canvas3d(plot, traces, st); } else soft.draw(); };
   async function draw() {
     const F = S.cells[line] && S.cells[line].figure; if (!F) return;
     const st = F.style || {};
-    try { await loadPlotly(); } catch (e) { box.textContent = 'Plotly could not load.'; return; }
-    const T = [];
-    F.items.forEach((it, k) => { const o = objStyle(st, it, k); if (o.hide) return;
-      for (const p of it.scene) { try { T.push(...traces3d(p, o.color, o.label ? o.name : '')); } catch (e) {} } });
+    if (st.r3d === 'canvas' || !webglOK()) return useSoft(st);
+    if (soft) { soft.destroy(); soft = null; plot.innerHTML = ''; }
+    try { await loadPlotly(); } catch (e) { return useSoft(st); }
+    const T = traces();
     const ax = t => ({ range: [-R3, R3], title: { text: t }, gridcolor: css('--grid-major'), zerolinecolor: css('--axis'), backgroundcolor: css('--bg'), showbackground: true, color: css('--muted'),
       visible: st.axes !== false, showgrid: st.grid !== false });
-    Plotly.react(plot, T, { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: css('--panel'), showlegend: false, uirevision: 'k',
-      font: { family: css('--font'), color: css('--ink') }, scene: { xaxis: ax('x'), yaxis: ax('y'), zaxis: ax('z'), aspectmode: 'cube' } },
-      { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['toImage'] });
+    try {
+      await Plotly.react(plot, T, { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: css('--panel'), showlegend: false, uirevision: 'k',
+        font: { family: css('--font'), color: css('--ink') }, scene: { xaxis: ax('x'), yaxis: ax('y'), zaxis: ax('z'), aspectmode: 'cube' } },
+        { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['toImage'] });
+      if (!plot.querySelector('canvas')) throw new Error('no WebGL canvas');
+    } catch (e) { useSoft(st); }
   }
   draw();
-  return { update: () => { sizeBox(box, figStyle(line)); draw().then(() => window.Plotly && Plotly.Plots.resize(plot)); },
-           destroy: () => { if (window.Plotly) Plotly.purge(plot); } };
+  return { update: () => { sizeBox(box, figStyle(line)); draw().then(() => !soft && window.Plotly && Plotly.Plots.resize(plot)); },
+           destroy: () => { if (soft) soft.destroy(); else if (window.Plotly) Plotly.purge(plot); } };
 }
 
 // ------------------------------------------------------------------ figure properties panel (non-modal: the figure stays visible)
@@ -981,6 +1057,7 @@ function figPanel(line) {
     <span>${esc(tr('fig_width'))}</span>${num('w', tr('fig_full'))}<span></span>
     <span>${esc(tr('fig_height'))}</span>${num('h', is2 ? '340' : '400')}<span></span>
     <span></span>${chk('axes', 'fig_axes')}${chk('grid', 'fig_grid')}`;
+  if (!is2) h += `<span>${esc(tr('fig_r3d'))}</span><select data-k="r3d" class="btn"><option value="">WebGL</option><option value="canvas" ${st.r3d === 'canvas' ? 'selected' : ''}>${esc(tr('fig_r3d_simple'))}</option></select><span></span>`;
   if (is2) {
     const win = F.window;
     h += `<span>x ${esc(tr('fig_from'))} / ${esc(tr('fig_to'))}</span>${num('xmin', win[0])}${num('xmax', win[1])}

@@ -420,6 +420,8 @@ class Figure:
             if isinstance(i, Figure):
                 self.items += i.items
                 self.dim = self.dim or i.dim
+            elif isinstance(i, tuple) and len(i) in (2, 3) and all(isinstance(c, (int, float, sp.Expr)) for c in i):
+                self.items.append(_pt(i))          # Draw((2, -2, 3)): a point written in place
             elif isinstance(i, (list, tuple)):     # e.g. the points of Intersect(...)
                 self.items += list(i)
             else:
