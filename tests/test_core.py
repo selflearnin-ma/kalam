@@ -73,6 +73,9 @@ def test_example_exercise():
     lines = json.loads(web.state())['lines']
     assert not [ln['error'] for ln in lines if ln.get('error')]
     assert any('D_f = \\mathbb{R}' in (ln.get('parts') or [(0, '')])[0][1] for ln in lines)
+    # a solution of Solve(...) used as a number: S[1] is the smallest
+    s = run('f(x) = x^2 - 2x - 3', 'S = Solve(f(x) = 0, x)', 'S[1]', 'S[2]', 'f(S[2] + 1)', 'a = Solve(x^2 = 2, x)[2]')
+    assert [c.value for c in s.cells[2:5]] == [-1, 3, 5] and s.env['a'] == sp.sqrt(2)
     assert run('Domain(1/(x - 2))').cells[0].value == sp.Union(sp.Interval.open(-sp.oo, 2), sp.Interval.open(2, sp.oo))
 
 

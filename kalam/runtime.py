@@ -282,6 +282,19 @@ def Factor(e):
     return sp.factor(e)
 
 
+def _set_item(self, k):
+    """S[1], S[2], ...: the elements of a solution set in increasing order (S[1] is the smallest)."""
+    el = list(self.args)
+    if all(e.is_real for e in el):
+        el.sort(key=lambda e: float(e))
+    if not 1 <= int(k) <= len(el):
+        raise IndexError('this set has %d element(s): use S[1] to S[%d]' % (len(el), len(el)) if el else 'this set is empty')
+    return el[int(k) - 1]
+
+
+sp.FiniteSet.__getitem__ = _set_item     # so a = Solve(f(x) = 0, x)[1] is a number
+
+
 def Domain(f):
     """Domain(f): the real numbers where f is defined (D_f)."""
     e, v = _body(f)

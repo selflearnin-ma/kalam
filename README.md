@@ -120,6 +120,9 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   close); drag the empty part of the bar to move the window.
 - The tools button of a figure (sliders icon) shows its zoom +, −, ⌂ and ⚙ buttons.
 
+- **Solutions as numbers**: `S = Solve(f(x) = 1/3, x)` then `S[1]` (the smallest solution), `S[2]`, …;
+  `f(S[1])` is its image, `a = Solve(x^2 = 2, x)[2]` gives `a = √2`.
+
 ### Input language
 
 | You type | Meaning |
