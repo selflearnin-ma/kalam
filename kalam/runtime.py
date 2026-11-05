@@ -8,6 +8,7 @@ Inside, always use `sp.X` (never bare names) because commands such as
 import copy
 import sympy as sp
 from sympy.geometry.entity import GeometryEntity
+from sympy.geometry.line import LinearEntity3D
 
 x, y, z, t = sp.symbols('x y z t')
 
@@ -243,27 +244,91 @@ def Vector(*a):
     return Vec(list(a))
 
 
+def _is3d(o):
+    if isinstance(o, (list, tuple)):
+        return any(_is3d(i) for i in o)
+    return isinstance(o, (sp.Point3D, LinearEntity3D, sp.Plane, SphereObj)) or (isinstance(o, Vec) and o.dim == 3)
+
+
+def _map3d(o, f, k=1):
+    """A 3D object whose points are moved by f (k: ratio of lengths, for the radius of a sphere)."""
+    if isinstance(o, (list, tuple)):
+        return [_map3d(i, f, k) for i in o]
+    if isinstance(o, sp.Point3D):
+        return sp.Point3D(*f(o))
+    if isinstance(o, LinearEntity3D):
+        return type(o)(sp.Point3D(*f(o.p1)), sp.Point3D(*f(o.p2)))
+    if isinstance(o, sp.Plane):           # three points of the plane, moved
+        n = sp.Matrix(o.normal_vector)
+        u = n.cross(sp.Matrix([1, 0, 0]) if n[1] != 0 or n[2] != 0 else sp.Matrix([0, 1, 0]))
+        v = n.cross(u)
+        P = sp.Matrix(o.p1)
+        return sp.Plane(*[sp.Point3D(*f(sp.Point3D(*(P + w)))) for w in (sp.zeros(3, 1), u, v)])
+    if isinstance(o, SphereObj):
+        return SphereObj(sp.Point3D(*f(o.center)), abs(k) * o.r)
+    if isinstance(o, Vec):                # a free vector: only its direction and length change
+        O = sp.Point3D(0, 0, 0)
+        return Vec(list(sp.Matrix(f(sp.Point3D(*o.comps))) - sp.Matrix(f(O))))
+    raise ValueError('cannot transform %s in space' % type(o).__name__)
+
+
+def _proj(P, about):
+    """Orthogonal projection of a 3D point on a plane or a line."""
+    return about.projection(P)
+
+
 def Reflect(o, about):
-    """Symmetric of o with respect to a line or a point."""
+    """Symmetric of o with respect to a point, a line or (in space) a plane."""
+    o = _pt(o) if isinstance(o, tuple) else o      # (1, 2) written in place is a point
     about = _pt(about)
+    if _is3d(o) or isinstance(about, (sp.Point3D, sp.Plane, LinearEntity3D)):
+        if isinstance(about, sp.Point):
+            about = sp.Point3D(*about.args) if len(about.args) == 3 else about
+            return _map3d(o, lambda P: [2 * a - b for a, b in zip(about.args, P.args)])
+        return _map3d(o, lambda P: [2 * a - b for a, b in zip(_proj(P, about).args, P.args)])
     if isinstance(about, sp.Point):
         return o.rotate(sp.pi, about)
     return o.reflect(about)
 
 
-def Rotate(o, angle, center=(0, 0)):
-    return o.rotate(angle, _pt(center))
+def Rotate(o, angle, center=None):
+    """Rotation of o by angle: around a point in the plane, around an axis (a line) in space."""
+    o = _pt(o) if isinstance(o, tuple) else o      # (1, 2) written in place is a point
+    if not _is3d(o):
+        return o.rotate(angle, _pt(center) if center is not None else sp.Point(0, 0))
+    if not isinstance(center, LinearEntity3D):
+        raise ValueError('in space a rotation turns around an axis: Rotate(o, angle, Line(A, B))')
+    A = sp.Matrix(center.p1)
+    d = sp.Matrix(center.direction_ratio)
+    d = d / sp.sqrt(d.dot(d))
+    c, s = sp.cos(angle), sp.sin(angle)
+
+    def turn(P):          # Rodrigues: v cos + (d × v) sin + d (d·v)(1 - cos), around the axis through A
+        v = sp.Matrix(P) - A
+        w = v * c + d.cross(v) * s + d * d.dot(v) * (1 - c)
+        return [sp.simplify(t) for t in A + w]
+    return _map3d(o, turn)
 
 
 def Translate(o, v):
+    """Translation of o by the vector v (in the plane or in space)."""
+    o = _pt(o) if isinstance(o, tuple) else o      # (1, 2) written in place is a point
     if isinstance(v, sp.Point):
         v = Vector(v)
-    return o.translate(*v.comps)
+    comps = v.comps if isinstance(v, Vec) else list(v)
+    if _is3d(o) or len(comps) == 3:
+        comps = (list(comps) + [0, 0, 0])[:3]
+        return _map3d(o, lambda P: [a + b for a, b in zip(P.args, comps)])
+    return o.translate(*comps)
 
 
-def Dilate(o, k, center=(0, 0)):
-    """Homothety of ratio k and given center."""
-    return o.scale(k, k, _pt(center))
+def Dilate(o, k, center=None):
+    """Homothety of ratio k and given center (in the plane or in space)."""
+    o = _pt(o) if isinstance(o, tuple) else o      # (1, 2) written in place is a point
+    if _is3d(o):
+        C = _pt(center) if center is not None else sp.Point3D(0, 0, 0)
+        return _map3d(o, lambda P: [c + k * (p - c) for p, c in zip(P.args, C.args)], k)
+    return o.scale(k, k, _pt(center) if center is not None else sp.Point(0, 0))
 
 
 # ---------------------------------------------------------------- algebra

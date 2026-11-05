@@ -10,8 +10,8 @@ from . import runtime
 
 USER_FILE = os.path.join(os.path.expanduser('~'), '.kalam', 'user_commands.json')
 
-CATEGORIES = ['calculus', 'arithmetic', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'graph3d',
-              'tables', 'matrix']
+CATEGORIES = ['calculus', 'arithmetic', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'figures',
+              'matrix']
 
 # name, former French and Arabic names (old files only), category, argument hint
 BUILTINS = [
@@ -40,11 +40,6 @@ BUILTINS = [
     ('Integral', 'Intégrale', 'تكامل', 'functions', 'f, a, b'),
     ('Limit', 'Limite', 'نهاية', 'functions', 'f, oo'),
     ('Tangent', 'Tangente', 'مماس', 'functions', 'f, a'),
-    ('Graphic', 'Graphique', 'رسم', 'functions', ''),
-    ('Draw', 'Tracer', 'ارسم', 'functions', 'f, A, c'),
-    ('Plot', 'Courbe', 'منحنى', 'functions', 'f, a, b'),
-    ('ParametricCurve', 'CourbeParamétrée', 'منحنى_وسيطي', 'functions', 'cos(t), sin(t), t, 0, 2pi'),
-    ('Slider', 'Curseur', 'منزلق', 'functions', '-5, 5, 0.1'),
     # polynomials
     ('Expand', 'Développer', 'نشر', 'polynomials', 'e'),
     ('Factor', 'Factoriser', 'تعميل', 'polynomials', 'e'),
@@ -83,18 +78,22 @@ BUILTINS = [
     ('Length', 'Longueur', 'طول', 'geometry', 's'),
     ('Area', 'Aire', 'مساحة', 'geometry', 'P'),
     ('Vector', 'Vecteur', 'متجهة', 'geometry', 'A, B'),
-    # graph3d
-    ('Graphic3D', None, None, 'graph3d', ''),
-    ('Plot3D', 'Graphe3D', 'رسم_فضائي', 'graph3d', 'x^2 - y^2'),
-    ('ParametricSurface', 'SurfaceParamétrée', 'سطح_وسيطي', 'graph3d',
+    # figures
+    ('Graphic', 'Graphique', 'رسم', 'figures', ''),
+    ('Draw', 'Tracer', 'ارسم', 'figures', 'f, A, c'),
+    ('Plot', 'Courbe', 'منحنى', 'figures', 'f, a, b'),
+    ('ParametricCurve', 'CourbeParamétrée', 'منحنى_وسيطي', 'figures', 'cos(t), sin(t), t, 0, 2pi'),
+    ('Slider', 'Curseur', 'منزلق', 'figures', '-5, 5, 0.1'),
+    ('Graphic3D', None, None, 'figures', ''),
+    ('Plot3D', 'Graphe3D', 'رسم_فضائي', 'figures', 'x^2 - y^2'),
+    ('ParametricSurface', 'SurfaceParamétrée', 'سطح_وسيطي', 'figures',
      'cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2'),
-    ('Sphere', 'Sphère', 'فلكة', 'graph3d', 'O, r'),
-    ('Plane', 'Plan', 'مستوى', 'graph3d', 'A, B, C'),
-    # tables
-    ('Table', 'Tableau', 'جدول', 'tables', '3, 2'),
-    ('Row', 'Ligne', 'سطر', 'tables', 'T, a, b, c'),
-    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'tables', 'x^2 - 4'),
-    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'tables', 'f'),
+    ('Sphere', 'Sphère', 'فلكة', 'figures', 'O, r'),
+    ('Plane', 'Plan', 'مستوى', 'figures', 'A, B, C'),
+    ('Table', 'Tableau', 'جدول', 'figures', '3, 2'),
+    ('Row', 'Ligne', 'سطر', 'figures', 'T, a, b, c'),
+    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'figures', 'x^2 - 4'),
+    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'figures', 'f'),
     # matrix
     ('Matrix', 'Matrice', 'مصفوفة', 'matrix', '[[1, 2], [3, 4]]'),
     ('Det', 'Déterminant', 'محددة', 'matrix', 'M'),
@@ -141,7 +140,8 @@ class Registry:
                         print('Kalam: user command %s ignored: %s' % (d.get('name'), e))
 
     def add_user(self, d):
-        cat = d.get('category') if d.get('category') in CATEGORIES else 'calculus'    # groups of earlier versions
+        cat = d.get('category')       # groups of earlier versions: figures, or calculus
+        cat = cat if cat in CATEGORIES else 'figures' if cat in ('graph2d', 'graph3d', 'tables') else 'calculus'
         cmd = Command(d['name'], d.get('fr'), d.get('ar'), cat,
                       d.get('hint', ''), compile_user(d['code']), d['code'], d.get('palette', True))
         self.commands[cmd.name] = cmd

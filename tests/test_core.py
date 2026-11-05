@@ -93,6 +93,17 @@ def test_arithmetic_polynomials_trigonometry():
     assert v[9] == sp.FiniteSet(sp.pi / 6, 5 * sp.pi / 6) and v[10] == 60 and v[11] == sp.pi / 3
 
 
+def test_transformations_in_space():
+    s = run('A = (1, 2, 3)', 'B = (0, 0, 1)', 'S = Sphere(A, 2)', 'P = Plane((0,0,0), (1,0,0), (0,1,0))', 'k = Line((0,0,0), (0,0,1))',
+            'Translate(A, Vector(1, 1, 1))', 'Dilate(S, 2, B)', 'Reflect(A, P)', 'Reflect(A, B)', 'Reflect(A, k)',
+            'Rotate(A, pi/2, k)', 'Translate(P, Vector(0, 0, 2))', 'Rotate((1, 2), pi/2)', 'Draw(S, Reflect(S, P))')
+    v = [c.value for c in s.cells[5:]]
+    assert v[0] == sp.Point3D(2, 3, 4) and (v[1].center, v[1].r) == (sp.Point3D(2, 4, 5), 4)
+    assert v[2:6] == [sp.Point3D(1, 2, -3), sp.Point3D(-1, -2, -1), sp.Point3D(-1, -2, 3), sp.Point3D(-2, 1, 3)]
+    assert v[6].distance(sp.Point3D(0, 0, 2)) == 0 and v[6].normal_vector[2] != 0 and v[7] == sp.Point(-2, 1)
+    assert s.cells[-1].shows_figure
+
+
 def test_drawables():
     s = run('y = 2x + 1', 'x^2 + y^2 < 4', 'z = x y', 'S = Sphere((0,0,0), 1)', 'c = Circle((0,0), 2)', '3 + 4')
     assert [dimension(c.value) for c in s.cells] == [2, 2, 3, 3, 2, None]
