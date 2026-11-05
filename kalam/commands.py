@@ -10,7 +10,7 @@ from . import runtime
 
 USER_FILE = os.path.join(os.path.expanduser('~'), '.kalam', 'user_commands.json')
 
-CATEGORIES = ['calculus', 'arithmetic', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'figures',
+CATEGORIES = ['calculus', 'arithmetic', 'sets', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'figures',
               'matrix']
 
 # name, former French and Arabic names (old files only), category, argument hint
@@ -34,6 +34,20 @@ BUILTINS = [
     ('PrimeFactors', None, None, 'arithmetic', '360'),
     ('Quotient', None, None, 'arithmetic', '17, 5'),
     ('Remainder', None, None, 'arithmetic', '17, 5'),
+    # sets
+    ('Interval', None, None, 'sets', '-1, 3'),
+    ('IntervalOpen', None, None, 'sets', '0, oo'),
+    ('IntervalLOpen', None, None, 'sets', '0, 1'),
+    ('IntervalROpen', None, None, 'sets', '0, 1'),
+    ('FiniteSet', None, None, 'sets', '1, 2, 3'),
+    ('Union', None, None, 'sets', 'A, B'),
+    ('Intersection', None, None, 'sets', 'A, B'),
+    ('Complement', None, None, 'sets', 'A, B'),
+    ('IsIn', None, None, 'sets', '2, A'),
+    ('IsSubset', None, None, 'sets', 'A, B'),
+    ('Cardinal', None, None, 'sets', 'A'),
+    ('Inf', None, None, 'sets', 'A'),
+    ('Sup', None, None, 'sets', 'A'),
     # functions
     ('Domain', None, None, 'functions', 'f'),
     ('Derivative', 'Dérivée', 'مشتقة', 'functions', 'f'),
@@ -78,6 +92,17 @@ BUILTINS = [
     ('Length', 'Longueur', 'طول', 'geometry', 's'),
     ('Area', 'Aire', 'مساحة', 'geometry', 'P'),
     ('Vector', 'Vecteur', 'متجهة', 'geometry', 'A, B'),
+    # geometry in space
+    ('Sphere', 'Sphère', 'فلكة', 'geometry', 'O, r'),
+    ('Plane', 'Plan', 'مستوى', 'geometry', 'A, B, C'),
+    ('Tetrahedron', None, None, 'geometry', 'A, B, C, D'),
+    ('Pyramid', None, None, 'geometry', 'S, A, B, C, D'),
+    ('Prism', None, None, 'geometry', 'A, B, C, Vector(0, 0, 2)'),
+    ('Cube', None, None, 'geometry', '(0, 0, 0), 2'),
+    ('Cuboid', None, None, 'geometry', '(0, 0, 0), 3, 2, 1'),
+    ('Cylinder', None, None, 'geometry', '(0, 0, 0), (0, 0, 3), 1'),
+    ('Cone', None, None, 'geometry', '(0, 0, 0), (0, 0, 3), 1'),
+    ('Volume', None, None, 'geometry', 'o'),
     # figures
     ('Graphic', 'Graphique', 'رسم', 'figures', ''),
     ('Draw', 'Tracer', 'ارسم', 'figures', 'f, A, c'),
@@ -88,8 +113,6 @@ BUILTINS = [
     ('Plot3D', 'Graphe3D', 'رسم_فضائي', 'figures', 'x^2 - y^2'),
     ('ParametricSurface', 'SurfaceParamétrée', 'سطح_وسيطي', 'figures',
      'cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2'),
-    ('Sphere', 'Sphère', 'فلكة', 'figures', 'O, r'),
-    ('Plane', 'Plan', 'مستوى', 'figures', 'A, B, C'),
     ('Table', 'Tableau', 'جدول', 'figures', '3, 2'),
     ('Row', 'Ligne', 'سطر', 'figures', 'T, a, b, c'),
     ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'figures', 'x^2 - 4'),

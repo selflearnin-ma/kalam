@@ -74,6 +74,70 @@ class SphereObj:
         return 'SphereObj(%s, %s)' % (self.center, self.r)
 
 
+def _M(P):
+    return sp.Matrix(list(P.args) if isinstance(P, sp.Point) else list(P))
+
+
+class Circle3D:
+    """A circle in space: center, radius and the normal of its plane."""
+    def __init__(self, center, r, normal):
+        self.center, self.r, self.dim = sp.Point3D(*center), sp.sympify(r), 3
+        n = _M(normal)
+        self.normal = n / sp.sqrt(n.dot(n))
+
+    def points(self, k=72):
+        """Numeric points around the circle (for drawing)."""
+        n = [float(c) for c in self.normal]
+        a = [1.0, 0.0, 0.0] if abs(n[0]) < 0.9 else [0.0, 1.0, 0.0]
+        u = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]]
+        lu = sum(c * c for c in u) ** 0.5
+        u = [c / lu for c in u]
+        v = [n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0]]
+        c, r = [float(t) for t in self.center.args], float(self.r)
+        import math
+        return [[c[i] + r * (math.cos(2 * math.pi * j / k) * u[i] + math.sin(2 * math.pi * j / k) * v[i]) for i in range(3)]
+                for j in range(k + 1)]
+
+    def _latex(self, printer):
+        a, b, c = self.center.args
+        sph = sp.Eq((x - a)**2 + (y - b)**2 + (z - c)**2, self.r**2, evaluate=False)
+        n = self.normal
+        pl = sp.Eq(sp.expand(n[0] * (x - a) + n[1] * (y - b) + n[2] * (z - c)), 0)
+        return r'\begin{cases} %s \\ %s \end{cases}' % (printer._print(sph), printer._print(pl))
+
+
+class Polygon3D:
+    """A polygon in space (its vertices lie in one plane)."""
+    def __init__(self, vertices):
+        self.vertices, self.dim = [sp.Point3D(*v) for v in vertices], 3
+
+    @property
+    def area(self):
+        o, s_ = _M(self.vertices[0]), sp.zeros(3, 1)
+        for a, b in zip(self.vertices[1:], self.vertices[2:]):
+            s_ += (_M(a) - o).cross(_M(b) - o)
+        return sp.simplify(sp.sqrt(s_.dot(s_)) / 2)
+
+    @property
+    def perimeter(self):
+        v = self.vertices
+        return sp.simplify(sum(a.distance(b) for a, b in zip(v, v[1:] + v[:1])))
+
+    def _latex(self, printer):
+        return r'\mathcal{P}\left(%s\right),\ \mathcal{A} = %s' % (
+            ', '.join(r'\left(%s\right)' % ', '.join(printer._print(c) for c in p.args) for p in self.vertices), printer._print(self.area))
+
+
+class Solid:
+    """A solid: vertices and faces (for drawing), its volume and its area (exact)."""
+    def __init__(self, vertices, faces, volume, area, edges=True):
+        self.vertices, self.faces, self.dim = vertices, faces, 3
+        self.volume, self.area, self.edges = sp.simplify(volume), sp.simplify(area), edges
+
+    def _latex(self, printer):
+        return r'\mathcal{V} = %s,\ \mathcal{A} = %s' % (printer._print(self.volume), printer._print(self.area))
+
+
 class Vec:
     """Vector with optional origin point (for drawing)."""
     def __init__(self, comps, origin=None):
@@ -152,8 +216,18 @@ def Ray(A, B):
 
 
 def Circle(C, *r):
-    """Circle(center, radius) | Circle(center, point) | Circle(A, B, C)."""
+    """Circle(center, radius) | Circle(center, point) | Circle(A, B, C).
+    In space: Circle(center, radius, normal vector) (horizontal when no normal is given) | Circle(A, B, C)."""
     C = _pt(C)
+    if C.ambient_dimension == 3:
+        if len(r) == 2 and all(isinstance(_pt(p), sp.Point) for p in r):        # through three points
+            A, a, b = _M(C), _M(_pt(r[0])) - _M(C), _M(_pt(r[1])) - _M(C)
+            n = a.cross(b)
+            O = A + (a.dot(a) * b.cross(n) + b.dot(b) * n.cross(a)) / (2 * n.dot(n))
+            return Circle3D(list(O), sp.sqrt(sp.simplify((O - A).dot(O - A))), n)
+        rad = C.distance(_pt(r[0])) if isinstance(r[0], (tuple, sp.Point)) else r[0]
+        n = r[1] if len(r) > 1 else (0, 0, 1)
+        return Circle3D(C, rad, n.comps if isinstance(n, Vec) else n)
     if len(r) == 2:
         return sp.Circle(C, _pt(r[0]), _pt(r[1]))
     r = r[0]
@@ -163,7 +237,8 @@ def Circle(C, *r):
 
 
 def Polygon(*pts):
-    return sp.Polygon(*[_pt(p) for p in pts])
+    pts = [_pt(p) for p in pts]
+    return Polygon3D(pts) if pts[0].ambient_dimension == 3 else sp.Polygon(*pts)
 
 
 def Midpoint(A, B=None):
@@ -172,8 +247,36 @@ def Midpoint(A, B=None):
     return _pt(A).midpoint(_pt(B))
 
 
+def _sphere_cut(s, o):
+    """Intersection of a sphere with a line, a plane or another sphere."""
+    C, r = _M(s.center), s.r
+    if isinstance(o, SphereObj):           # two spheres: their radical plane cuts the first one
+        D = _M(o.center)
+        n = D - C
+        if n.dot(n) == 0:
+            return []
+        k = (n.dot(n) + r**2 - o.r**2) / (2 * n.dot(n))
+        o = sp.Plane(sp.Point3D(*(C + k * n)), normal_vector=list(n))
+    if isinstance(o, sp.Plane):
+        d = sp.simplify(o.distance(s.center))
+        if (d - r).is_positive:
+            return []
+        H = o.projection(s.center)
+        rr = sp.sqrt(sp.simplify(r**2 - d**2))
+        return H if rr == 0 else Circle3D(H, rr, o.normal_vector)
+    if isinstance(o, LinearEntity3D):
+        t = sp.Symbol('t', real=True)
+        P, u = _M(o.p1), _M(o.direction_ratio)
+        pts = [sp.Point3D(*(P + v * u)) for v in sp.solveset((P + t * u - C).dot(P + t * u - C) - r**2, t, sp.S.Reals)]
+        return [p for p in pts if o.contains(p)]
+    raise ValueError('cannot intersect a sphere with %s' % type(o).__name__)
+
+
 def Intersect(a, b):
     a, b = _pt(a), _pt(b)
+    if isinstance(a, SphereObj) or isinstance(b, SphereObj):
+        r = _sphere_cut(*((a, b) if isinstance(a, SphereObj) else (b, a)))
+        return _one(r) if isinstance(r, list) else r      # points, or a circle (plane / sphere)
     if isinstance(a, GeometryEntity) and isinstance(b, GeometryEntity):
         return _one(a.intersection(b))
     sols = sp.solve([_as_eq(a), _as_eq(b)], [x, y], dict=True)
@@ -187,11 +290,17 @@ def Perpendicular(P, l):
 
 
 def Parallel(P, l):
+    """The parallel to l through P: a line, or (l a plane) a plane."""
+    if isinstance(l, sp.Plane):
+        return sp.Plane(_pt(P), normal_vector=l.normal_vector)
     return l.parallel_line(_pt(P))
 
 
 def PerpendicularBisector(A, B=None):
-    seg = A if B is None else sp.Segment(_pt(A), _pt(B))
+    """The perpendicular bisector of [AB]: a line in the plane, a plane in space."""
+    seg = A if B is None else Segment(A, B)
+    if isinstance(seg, sp.Segment3D):
+        return sp.Plane(seg.midpoint, normal_vector=list(_M(seg.p2) - _M(seg.p1)))
     return seg.perpendicular_bisector()
 
 
@@ -200,7 +309,8 @@ def AngleBisector(A, B, C):
     A, B, C = _pt(A), _pt(B), _pt(C)
     u = (A - B) / A.distance(B)
     v = (C - B) / C.distance(B)
-    return sp.Line(B, B + u + v)
+    w = [sp.simplify(c) for c in (u + v).args]
+    return sp.Line3D(B, B + sp.Point3D(*w)) if len(w) == 3 else sp.Line(B, B + sp.Point(*w))
 
 
 def Distance(a, b):
@@ -215,13 +325,114 @@ def Length(o):
         return sp.simplify(o.norm())
     if isinstance(o, sp.Circle):
         return o.circumference
-    if isinstance(o, sp.Polygon):
+    if isinstance(o, Circle3D):
+        return 2 * sp.pi * o.r
+    if isinstance(o, (sp.Polygon, Polygon3D)):
         return sp.simplify(o.perimeter)
     return sp.simplify(o.length)
 
 
 def Area(o):
+    """Area of a polygon or a circle (disc); in space also of a sphere and of a solid's surface."""
+    if isinstance(o, SphereObj):
+        return 4 * sp.pi * o.r**2
+    if isinstance(o, Circle3D):
+        return sp.pi * o.r**2
     return sp.simplify(abs(o.area))
+
+
+def Volume(o):
+    """Volume of a solid (Tetrahedron, Pyramid, Prism, Cube, Cuboid, Cylinder, Cone) or of a sphere (ball)."""
+    if isinstance(o, SphereObj):
+        return sp.Rational(4, 3) * sp.pi * o.r**3
+    if isinstance(o, Solid):
+        return o.volume
+    raise ValueError('Volume(...) is for solids and spheres')
+
+
+# ---------------------------------------------------------------- solids
+def _p3(P):
+    P = _pt(P)
+    if not (isinstance(P, sp.Point) and P.ambient_dimension == 3):
+        raise ValueError('a solid needs points of space (x, y, z)')
+    return sp.Point3D(*P.args)
+
+
+def _face_area(pts):
+    return Polygon3D(pts).area
+
+
+def _polyhedron(vs, faces, volume):
+    return Solid(vs, faces, volume, sum(_face_area([vs[i] for i in f]) for f in faces))
+
+
+def Pyramid(S, *base):
+    """Pyramid(S, A, B, C, ...): apex S and base polygon A B C ... (Pyramid(S, A, B, C) is a tetrahedron)."""
+    S, base = _p3(S), [_p3(P) for P in base]
+    if len(base) < 3:
+        raise ValueError('the base needs at least 3 points')
+    vs = base + [S]
+    k = len(base)
+    faces = [list(range(k))] + [[i, (i + 1) % k, k] for i in range(k)]
+    plane = sp.Plane(*base[:3])
+    return _polyhedron(vs, faces, Polygon3D(base).area * plane.distance(S) / 3)
+
+
+def Tetrahedron(A, B, C, D):
+    """Tetrahedron(A, B, C, D)."""
+    return Pyramid(D, A, B, C)
+
+
+def Prism(*args):
+    """Prism(A, B, C, ..., u): the base polygon A B C ... moved along the vector u."""
+    *base, u = args
+    base = [_p3(P) for P in base]
+    u = u.comps if isinstance(u, Vec) else list(_pt(u).args)
+    top = [sp.Point3D(*[a + b for a, b in zip(P.args, u)]) for P in base]
+    k = len(base)
+    faces = [list(range(k)), list(range(k, 2 * k))] + [[i, (i + 1) % k, k + (i + 1) % k, k + i] for i in range(k)]
+    n = _M(sp.Plane(*base[:3]).normal_vector)
+    h = abs(n.dot(sp.Matrix(u))) / sp.sqrt(n.dot(n))
+    return _polyhedron(base + top, faces, Polygon3D(base).area * h)
+
+
+def Cuboid(A, a, b, c):
+    """Cuboid(A, a, b, c): rectangular box with corner A and edges a, b, c along the axes."""
+    A = _p3(A)
+    return Prism(A, A + sp.Point3D(a, 0, 0), A + sp.Point3D(a, b, 0), A + sp.Point3D(0, b, 0), (0, 0, c))
+
+
+def Cube(A, a):
+    """Cube(A, a): cube with corner A and edge a along the axes."""
+    return Cuboid(A, a, a, a)
+
+
+def _round(A, B, r, apex, n=36):
+    """Cylinder (apex False) or cone (apex True): base disc centered at A, axis to B; a mesh of n sides."""
+    A, B, r = _p3(A), _p3(B), sp.sympify(r)
+    base = Circle3D(A, r, _M(B) - _M(A)).points(n)[:-1]
+    h = A.distance(B)
+    d = [float(b - a) for a, b in zip(A.args, B.args)]
+    ring = [sp.Point3D(*p) for p in base]
+    if apex:
+        vs = ring + [B, A]
+        faces = [[i, (i + 1) % n, n] for i in range(n)] + [[i, (i + 1) % n, n + 1] for i in range(n)]
+        return Solid(vs, faces, sp.pi * r**2 * h / 3, sp.pi * r**2 + sp.pi * r * sp.sqrt(r**2 + h**2), edges=False)
+    top = [sp.Point3D(*[p[i] + d[i] for i in range(3)]) for p in base]
+    vs = ring + top + [A, B]
+    faces = [[i, (i + 1) % n, n + (i + 1) % n, n + i] for i in range(n)] + \
+            [[i, (i + 1) % n, 2 * n] for i in range(n)] + [[n + i, n + (i + 1) % n, 2 * n + 1] for i in range(n)]
+    return Solid(vs, faces, sp.pi * r**2 * h, 2 * sp.pi * r**2 + 2 * sp.pi * r * h, edges=False)
+
+
+def Cylinder(A, B, r):
+    """Cylinder(A, B, r): axis from the center A of one base to the center B of the other, radius r."""
+    return _round(A, B, r, False)
+
+
+def Cone(A, B, r):
+    """Cone(A, B, r): base disc centered at A with radius r, apex B."""
+    return _round(A, B, r, True)
 
 
 def Tangent(f, a):
@@ -247,7 +458,7 @@ def Vector(*a):
 def _is3d(o):
     if isinstance(o, (list, tuple)):
         return any(_is3d(i) for i in o)
-    return isinstance(o, (sp.Point3D, LinearEntity3D, sp.Plane, SphereObj)) or (isinstance(o, Vec) and o.dim == 3)
+    return isinstance(o, (sp.Point3D, LinearEntity3D, sp.Plane, SphereObj, Circle3D, Polygon3D, Solid)) or (isinstance(o, Vec) and o.dim == 3)
 
 
 def _map3d(o, f, k=1):
@@ -266,6 +477,13 @@ def _map3d(o, f, k=1):
         return sp.Plane(*[sp.Point3D(*f(sp.Point3D(*(P + w)))) for w in (sp.zeros(3, 1), u, v)])
     if isinstance(o, SphereObj):
         return SphereObj(sp.Point3D(*f(o.center)), abs(k) * o.r)
+    if isinstance(o, Circle3D):
+        n2 = sp.Matrix(f(sp.Point3D(*(_M(o.center) + o.normal)))) - sp.Matrix(f(o.center))
+        return Circle3D(f(o.center), abs(k) * o.r, n2)
+    if isinstance(o, Polygon3D):
+        return Polygon3D([f(P) for P in o.vertices])
+    if isinstance(o, Solid):
+        return Solid([sp.Point3D(*f(P)) for P in o.vertices], o.faces, abs(k)**3 * o.volume, k**2 * o.area, o.edges)
     if isinstance(o, Vec):                # a free vector: only its direction and length change
         O = sp.Point3D(0, 0, 0)
         return Vec(list(sp.Matrix(f(sp.Point3D(*o.comps))) - sp.Matrix(f(O))))
@@ -1082,3 +1300,71 @@ def Degrees(r):
 def Radians(d):
     """Radians(60) = pi/3: degrees to radians."""
     return sp.nsimplify(d * sp.pi / 180)
+
+
+# ---------------------------------------------------------------- sets
+def Interval(a, b):
+    """Interval(a, b) = [a ; b] (closed); a or b may be -oo, oo."""
+    return sp.Interval(a, b, left_open=a == -sp.oo, right_open=b == sp.oo)
+
+
+def IntervalOpen(a, b):
+    """IntervalOpen(a, b) = ]a ; b[."""
+    return sp.Interval.open(a, b)
+
+
+def IntervalLOpen(a, b):
+    """IntervalLOpen(a, b) = ]a ; b]."""
+    return sp.Interval.Lopen(a, b)
+
+
+def IntervalROpen(a, b):
+    """IntervalROpen(a, b) = [a ; b[."""
+    return sp.Interval.Ropen(a, b)
+
+
+def FiniteSet(*el):
+    """FiniteSet(1, 2, 3) = {1, 2, 3}."""
+    return sp.FiniteSet(*el)
+
+
+def Union(*sets):
+    """Union(A, B, ...) = A ∪ B ∪ ... (also written A ∪ B)."""
+    return sp.Union(*sets)
+
+
+def Intersection(*sets):
+    """Intersection(A, B, ...) = A ∩ B ∩ ... (also written A ∩ B)."""
+    return sp.Intersection(*sets)
+
+
+def Complement(A, B):
+    """Complement(A, B) = A ∖ B: the elements of A not in B (also written A ∖ B)."""
+    return sp.Complement(A, B)
+
+
+def IsIn(a, S):
+    """IsIn(a, S): is a an element of S (a ∈ S)?"""
+    return sp.Contains(a, S).doit()
+
+
+def IsSubset(A, B):
+    """IsSubset(A, B): is A included in B (A ⊂ B)?"""
+    return A.is_subset(B)
+
+
+def Cardinal(S):
+    """Cardinal(S): the number of elements of a finite set."""
+    if not isinstance(S, sp.FiniteSet):
+        raise ValueError('Cardinal(...) is for finite sets: {1, 2, 3}')
+    return len(S)
+
+
+def Inf(S):
+    """Inf(S): the infimum of S (its smallest element when there is one)."""
+    return sp.sympify(S).inf
+
+
+def Sup(S):
+    """Sup(S): the supremum of S (its largest element when there is one)."""
+    return sp.sympify(S).sup

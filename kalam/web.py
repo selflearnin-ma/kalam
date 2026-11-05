@@ -97,6 +97,18 @@ def _scene(v, free):
         return [dict(k='plane', n=n, d=-sum(a * b for a, b in zip(n, _p(v.p1))))]
     if isinstance(v, runtime.SphereObj):
         return [dict(k='sph', c=_p(v.center), r=_n(v.r))]
+    if isinstance(v, runtime.Circle3D):
+        return [dict(k='poly3', pts=v.points())]
+    if isinstance(v, runtime.Polygon3D):
+        pts = [_p(P) for P in v.vertices]
+        return [dict(k='mesh', pts=pts, faces=[list(range(len(pts)))]), dict(k='poly3', pts=pts + pts[:1])]
+    if isinstance(v, runtime.Solid):
+        pts = [_p(P) for P in v.vertices]
+        out = [dict(k='mesh', pts=pts, faces=v.faces)]
+        if v.edges:          # polyhedra: their edges drawn too
+            edges = {tuple(sorted((f[i], f[(i + 1) % len(f)]))) for f in v.faces for i in range(len(f))}
+            out += [dict(k='seg3', a=pts[i], b=pts[j]) for i, j in sorted(edges)]
+        return out
     if isinstance(v, runtime.Surface):
         if len(v.comps) == 1:
             js = _js(v.comps[0], 'xy')

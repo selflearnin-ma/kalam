@@ -310,6 +310,11 @@ const KEYS = [
   ['+', ' + '], ['-', ' - '], ['\\times', '*'], ['\\div', '/'], ['=', ' = '], ['\\le', ' ≤ '], ['\\ge', ' ≥ '], ['\\neq', ' ≠ '], null,
   ['\\sin', 'sin()', 1], ['\\cos', 'cos()', 1], ['\\tan', 'tan()', 1], ['\\ln', 'ln()', 1], ['\\log', 'log()', 1], ['n!', '!'], null,
   ['\\nearrow', '"↗"'], ['\\searrow', '"↘"'], ['\\|', '"||"'], null,
+  // sets
+  ['\\mathbb{N}', 'ℕ'], ['\\mathbb{Z}', 'ℤ'], ['\\mathbb{Q}', 'ℚ'], ['\\mathbb{R}', 'ℝ'], ['\\emptyset', '∅'],
+  ['\\cup', ' ∪ ', 0, 'op'], ['\\cap', ' ∩ ', 0, 'op'], ['\\setminus', ' ∖ ', 0, 'op'],
+  ['\\{\\square\\}', 'FiniteSet()', 1, 'op'], ['[\\square;\\square]', 'Interval(, )', 3, 'op'], [']\\square;\\square[', 'IntervalOpen(, )', 3, 'op'],
+  ['\\in', 'IsIn(, )', 3, 'op'], ['\\subset', 'IsSubset(, )', 3, 'op'], null,
   ['f(x)=', 'f(x) = '], ['\\text{"…"}', '""', 1], ['\\{\\{\\square\\}\\}', '{{}}', 2], ['\\#', '# ']];
 const DEMO = { fr: __DEMO_FR__, ar: __DEMO_AR__ };
 const $ = s => document.querySelector(s);
@@ -975,6 +980,13 @@ function traces3d(p, col, name) {
       else if (k === 1) T.push(surfaceTrace(G.map(() => G), Zs, G.map(s => G.map(() => s)), col));
       else T.push(surfaceTrace(Zs, G.map(() => G), G.map(s => G.map(() => s)), col));
       break; }
+    case 'poly3': line(...[0, 1, 2].map(k => p.pts.map(q => q[k]))); break;
+    case 'mesh': {        // faces of a solid or a polygon in space, cut into triangles (fans)
+      const I = [], J = [], K = [];
+      for (const f of p.faces) for (let t = 1; t + 1 < f.length; t++) { I.push(f[0]); J.push(f[t]); K.push(f[t + 1]); }
+      T.push({ type: 'mesh3d', x: p.pts.map(q => q[0]), y: p.pts.map(q => q[1]), z: p.pts.map(q => q[2]), i: I, j: J, k: K,
+               color: col, opacity: 0.45, flatshading: true, hoverinfo: 'skip' });
+      break; }
     case 'sph': case 'psurf': {
       const U = p.k === 'sph' ? grid(40, 0, 2 * Math.PI) : grid(50, p.ur[0], p.ur[1]);
       const Vv = p.k === 'sph' ? grid(24, -Math.PI / 2, Math.PI / 2) : grid(50, p.vr[0], p.vr[1]);
@@ -1013,6 +1025,16 @@ function canvas3d(host, getTraces, st) {
           const lit = 0.55 + 0.45 * Math.abs((nx * 0.3 + ny * -0.4 + nz * 0.85) / nl);
           const sp = q.map(v => P(...v));
           faces.push({ d: sp.reduce((a, v) => a + v[2], 0) / 4, sp, c: col.map(c => Math.round(c * lit)) });
+        }
+      } else if (t.type === 'mesh3d') {
+        const col = hex(t.color);
+        for (let q = 0; q < t.i.length; q++) {
+          const v = [t.i[q], t.j[q], t.k[q]].map(n => [t.x[n], t.y[n], t.z[n]]);
+          const u = v[1].map((c, m) => c - v[0][m]), w = v[2].map((c, m) => c - v[0][m]);
+          const nx = u[1] * w[2] - u[2] * w[1], ny = u[2] * w[0] - u[0] * w[2], nz = u[0] * w[1] - u[1] * w[0], nl = Math.hypot(nx, ny, nz) || 1;
+          const lit = 0.6 + 0.4 * Math.abs((nx * 0.3 + ny * -0.4 + nz * 0.85) / nl);
+          const sp = v.map(c => P(...c));
+          faces.push({ d: (sp[0][2] + sp[1][2] + sp[2][2]) / 3, sp, c: col.map(c => Math.round(c * lit)) });
         }
       } else if (t.type === 'scatter3d' && t.mode === 'lines') {
         for (let k = 1; k < t.x.length; k++) if (t.x[k] != null && t.x[k - 1] != null) {

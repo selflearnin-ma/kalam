@@ -104,6 +104,19 @@ def test_transformations_in_space():
     assert s.cells[-1].shows_figure
 
 
+def test_geometry_in_space_and_sets():
+    s = run('O = (0, 0, 0)', 'A = (1, 0, 0)', 'B = (0, 2, 0)', 'C = (0, 0, 3)', 'S = Sphere(O, 2)',
+            'Area(Polygon(A, B, C))', 'PerpendicularBisector(A, B)', 'Intersect(S, Plane((0,0,1), Vector(0,0,1)))',
+            'Volume(Tetrahedron(O, A, B, C))', 'Volume(Cube(O, 2))', 'Volume(Cylinder(O, (0,0,3), 1))', 'Volume(Cone(O, (0,0,3), 1))',
+            'Draw(Cube(O, 1), Circle(O, 2), Polygon(A, B, C))')
+    v = [c.value for c in s.cells]
+    assert v[5] == sp.Rational(7, 2) and isinstance(v[6], sp.Plane) and isinstance(v[7], runtime.Circle3D) and v[7].r == sp.sqrt(3)
+    assert v[8:12] == [1, 8, 3 * sp.pi, sp.pi] and s.cells[-1].shows_figure and dimension(v[-1].items) == 3
+    s = run('A = Interval(-1, 3)', 'B = IntervalOpen(2, oo)', 'A ∪ B', 'A ∩ B', 'A ∖ B', 'ℝ ∖ FiniteSet(0)', 'IsIn(3, A)', 'ℤ ∩ A', 'ℝ')
+    assert [c.latex for c in s.cells[2:5]] == [r'\left[ -1\,;\,+\infty \right[', r'\left] 2\,;\,3 \right]', r'\left[ -1\,;\,2 \right]']
+    assert s.cells[6].value is sp.true and s.cells[7].value == sp.Range(-1, 4) and s.cells[8].latex == r'\mathbb{R}'
+
+
 def test_drawables():
     s = run('y = 2x + 1', 'x^2 + y^2 < 4', 'z = x y', 'S = Sphere((0,0,0), 1)', 'c = Circle((0,0), 2)', '3 + 4')
     assert [dimension(c.value) for c in s.cells] == [2, 2, 3, 3, 2, None]

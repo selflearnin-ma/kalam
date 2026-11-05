@@ -34,9 +34,14 @@ _MATH = ['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'asin', 'acos', 'atan', 'sinh
          'Le', 'Gt', 'Ge', 'Lambda', 'Integer', 'Float', 'Rational', 'Symbol', 'Function']
 GLOBALS_BASE = {n: getattr(sp, n) for n in _MATH}
 GLOBALS_BASE.update(sp=sp, e_=sp.E, i_=sp.I)
+GLOBALS_BASE.update(Reals=sp.S.Reals, Naturals0=sp.S.Naturals0, Integers=sp.S.Integers, Rationals=sp.S.Rationals,
+                    EmptySet=sp.S.EmptySet)       # ℝ ℕ ℤ ℚ ∅
 
 _UNICODE = {'²': '^2', '³': '^3', '×': '*', '÷': '/', '·': '*', '−': '-', '≤': '<=', '≥': '>=',
-            '≠': '!=', '∞': 'oo', '،': ',', '٫': '.', '٬': ''}
+            '≠': '!=', '∞': 'oo', '،': ',', '٫': '.', '٬': '',
+            # sets: A ∪ B, A ∩ B, A ∖ B and the number sets
+            '∪': ' | ', '∩': ' & ', '∖': ' - ', 'ℝ': ' Reals ', 'ℕ': ' Naturals0 ', 'ℤ': ' Integers ', 'ℚ': ' Rationals ',
+            '∅': ' EmptySet '}
 _DIGITS = str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '0123456789' * 2)
 _RENAME = {'e': 'e_', 'i': 'i_', 'π': 'pi', 'ln': 'log', 'abs': 'Abs', 'racine': 'sqrt'}
 _DEF = re.compile(r'^\s*([^\W\d]\w*)\s*(?:\(([^()]*)\))?\s*(:=|=)(?!=)\s*(.+)$', re.S)
@@ -625,7 +630,21 @@ class _HeldPrinter(LatexPrinter):
         return super()._print_Mul(e)
 
 
+def _interval_latex(v):
+    """[a ; b], ]a ; b[ ... (the notation of French and Moroccan schools)."""
+    a, b = v.start, v.end
+    return r'\left%s %s\,;\,%s \right%s' % (']' if v.left_open else '[', runtime._tex_x(a), runtime._tex_x(b), '[' if v.right_open else ']')
+
+
 def value_latex(v):
+    if v is sp.S.Reals:
+        return r'\mathbb{R}'
+    if isinstance(v, sp.Interval):
+        return _interval_latex(v)
+    if isinstance(v, sp.Union) and all(isinstance(a, (sp.Interval, sp.FiniteSet)) for a in v.args):
+        return r' \cup '.join(value_latex(a) for a in v.args)
+    if v is sp.S.Naturals0:
+        return r'\mathbb{N}'
     if id(v) in _HELD:
         return _HeldPrinter(dict(order='none')).doprint(v)
     L = sp.latex
@@ -683,7 +702,8 @@ def display_latex(v):
 
 
 # ---------------------------------------------------------------- drawable kind
-_3D = (sp.Point3D, LinearEntity3D, sp.Plane, runtime.Surface, runtime.SphereObj)
+_3D = (sp.Point3D, LinearEntity3D, sp.Plane, runtime.Surface, runtime.SphereObj, runtime.Circle3D, runtime.Polygon3D,
+       runtime.Solid)
 
 
 def dimension(v):

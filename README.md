@@ -150,8 +150,10 @@ for a decimal approximation. Irrational numbers also show `≈`.
 
 Commands have one name, the same in every interface language (French, Arabic and English menus).
 Notebooks written with the French or Arabic command names of earlier versions are converted when opened.
-The palette shows them in this order: Keyboard, then the groups below. Transformations work in the plane and in
-space (in space Reflect also takes a plane, and Rotate turns around an axis: `Rotate(A, pi/2, Line(O, B))`).
+The palette shows them in this order: Keyboard, then the groups below. Geometry and transformations work in the
+plane and in space (in space Reflect also takes a plane, and Rotate turns around an axis: `Rotate(A, pi/2, Line(O, B))`).
+Sets can also be written with symbols: `A ∪ B`, `A ∩ B`, `A ∖ B`, `ℕ ℤ ℚ ℝ ∅` (keys on the Keyboard tab);
+intervals are shown as [a ; b], ]a ; b[.
 
 **Calculus**
 
@@ -179,6 +181,24 @@ space (in space Reflect also takes a plane, and Rotate turns around an axis: `Ro
 | PrimeFactors | `PrimeFactors(360)` |
 | Quotient | `Quotient(17, 5)` |
 | Remainder | `Remainder(17, 5)` |
+
+**Sets**
+
+| Command | Example |
+|---|---|
+| Interval | `Interval(-1, 3)` |
+| IntervalOpen | `IntervalOpen(0, oo)` |
+| IntervalLOpen | `IntervalLOpen(0, 1)` |
+| IntervalROpen | `IntervalROpen(0, 1)` |
+| FiniteSet | `FiniteSet(1, 2, 3)` |
+| Union | `Union(A, B)` |
+| Intersection | `Intersection(A, B)` |
+| Complement | `Complement(A, B)` |
+| IsIn | `IsIn(2, A)` |
+| IsSubset | `IsSubset(A, B)` |
+| Cardinal | `Cardinal(A)` |
+| Inf | `Inf(A)` |
+| Sup | `Sup(A)` |
 
 **Functions**
 
@@ -243,6 +263,16 @@ space (in space Reflect also takes a plane, and Rotate turns around an axis: `Ro
 | Length | `Length(s)` |
 | Area | `Area(P)` |
 | Vector | `Vector(A, B)` |
+| Sphere | `Sphere(O, r)` |
+| Plane | `Plane(A, B, C)` |
+| Tetrahedron | `Tetrahedron(A, B, C, D)` |
+| Pyramid | `Pyramid(S, A, B, C, D)` |
+| Prism | `Prism(A, B, C, Vector(0, 0, 2))` |
+| Cube | `Cube((0, 0, 0), 2)` |
+| Cuboid | `Cuboid((0, 0, 0), 3, 2, 1)` |
+| Cylinder | `Cylinder((0, 0, 0), (0, 0, 3), 1)` |
+| Cone | `Cone((0, 0, 0), (0, 0, 3), 1)` |
+| Volume | `Volume(o)` |
 
 **Figures**
 
@@ -256,8 +286,6 @@ space (in space Reflect also takes a plane, and Rotate turns around an axis: `Ro
 | Graphic3D | `Graphic3D()` |
 | Plot3D | `Plot3D(x^2 - y^2)` |
 | ParametricSurface | `ParametricSurface(cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2)` |
-| Sphere | `Sphere(O, r)` |
-| Plane | `Plane(A, B, C)` |
 | Table | `Table(3, 2)` |
 | Row | `Row(T, a, b, c)` |
 | SignTable | `SignTable(x^2 - 4)` |

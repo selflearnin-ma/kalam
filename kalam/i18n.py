@@ -42,6 +42,7 @@ STRINGS = {
     'geometry': ('Géométrie', 'هندسة', 'Geometry'),
     'transform': ('Transformations', 'تحويلات', 'Transformations'),
     'arithmetic': ('Arithmétique', 'الحسابيات', 'Arithmetic'),
+    'sets': ('Ensembles', 'المجموعات', 'Sets'),
     'functions': ('Fonctions', 'الدوال', 'Functions'),
     'polynomials': ('Polynômes', 'الحدوديات', 'Polynomials'),
     'trigonometry': ('Trigonométrie', 'حساب المثلثات', 'Trigonometry'),
