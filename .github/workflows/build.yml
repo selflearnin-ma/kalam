@@ -174,3 +174,6 @@ jobs:
           # same version run again: replace the files of the existing release
           gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "SymNote $TAG" --generate-notes $files \
             || gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber $files
+          # files of the app's former name (Kalam) are not part of the release any more
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep '^Kalam' \
+            | while read -r a; do gh release delete-asset "$TAG" "$a" --repo "$GITHUB_REPOSITORY" -y; done || true
