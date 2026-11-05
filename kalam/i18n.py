@@ -138,6 +138,11 @@ STRINGS = {
     'autosaved': ('Enregistré dans ce navigateur', 'محفوظ في هذا المتصفح', 'Saved in this browser'),
     'opened': ('Ouvert : %s', 'تم فتح: %s', 'Opened: %s'),
     'confirm_new': ('Effacer le cahier actuel ?', 'مسح الدفتر الحالي؟', 'Clear the current notebook?'),
+    'save_q': ('Enregistrer les modifications de « %s » ?', 'حفظ تعديلات « %s »؟', 'Save the changes to "%s"?'),
+    'dont_save': ('Ne pas enregistrer', 'عدم الحفظ', "Don't save"),
+    'cancel': ('Annuler', 'إلغاء', 'Cancel'),
+    'close_doc': ('Fermer', 'إغلاق', 'Close'),
+    'example': ('Ouvrir un exemple', 'فتح مثال', 'Open an example'),
     'yes': ('Oui', 'نعم', 'Yes'),
     'no': ('Non', 'لا', 'No'),
 }

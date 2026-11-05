@@ -93,6 +93,9 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   is rewritten. Figures are exported to LaTeX (tkz) in place.
 - **Enter** adds a line, **Ctrl+Enter** evaluates and stays on the cell, **Shift+Enter** evaluates and
   goes to the next cell; the **✓** button evaluates (phones). Cells after an edited one recompute.
+- **Several notebooks**, one tab each (above the palette): New (Ctrl+N) and Open (Ctrl+O, several files at once) add a
+  tab, Close (Ctrl+W or × on the tab). Closing a modified notebook, or the app, asks to save it. At the next start the
+  notebooks open last time come back (unsaved changes included); if none was open, an empty notebook.
 - **Fichier** menu: New (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Save as (Ctrl+Shift+S), Export (Ctrl+E);
   the **Commandes** button opens the commands editor. In the apps Save writes back to the opened file; in a browser it downloads the `.klm`.
 - Typing `(` `[` `{` `"` adds the closing one; typing the closing one steps over it; Backspace on an empty pair
