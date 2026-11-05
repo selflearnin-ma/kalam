@@ -424,7 +424,7 @@ class Session:
         if len(set(dims)) > 1:
             raise KalamError('a figure is either 2D or 3D, not both')
         names = {id(v): k for k, v in self.env.items() if not k.startswith('_c')}
-        c.labels = [names.get(id(i)) for i in items]
+        c.labels = [names.get(id(i)) or names.get(id(getattr(i, 'source', None))) for i in items]   # Plot(f): labelled f
 
     def _evaluate_math(self, c, code):
         m = _METHOD.match(code)

@@ -70,15 +70,16 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
 |---|---|---|
 | definition | `f(x) = x^2 - 2x - 3`, `A = (1, 2)` | nothing |
 | expression | `Solve(f(x) = 0, x)`, `f`, `f(x)`, `A` | its result |
-| drawing | `Draw(f, A, c)`, `Plot(f)`, `Plot3D(x y)` | a figure |
+| drawing | `Draw(A, c)`, `Plot(f)`, `Represent(x^2 + y^2 < 4)` | a figure |
 | text | `"Soit $f$ définie par $f(x) = {{f(x)}}$."` or `« … »` | the sentence; `$…$` is a formula, `{{expr}}` a computed value |
 | hidden result | `Solve(f(x) = 0, x);` | nothing (trailing `;`) |
 | comment | `# pour moi` | nothing |
 
 - The code is never shown, only the output (a cell of definitions shows nothing); click a cell to edit it.
 - **Figures appear only where you ask for them**, as the output of a drawing command:
-  `Draw(f, A, c)` (any 2D or 3D objects), `Plot(f, a, b)` (one function), `Plot3D(x^2 - y^2)`.
-  To build one figure step by step: `G = Graphic()`, then `G.Draw(f, A)`, `G.Plot(sin(x))`, … (each adds
+  each kind of object has its command: `Draw(A, s, c)` / `Draw3D(...)` for geometric objects, `Plot(f)`, `Plot(f, g)`,
+  `Plot(f, a, b)` / `Plot3D(f)` for functions, `Represent(...)` / `Represent3D(...)` for equations, inequalities and sets.
+  To mix them in one figure: `G = Graphic()`, then `G.Plot(f)`, `G.Draw(A)`, `G.Represent(y = 1)`, … (each adds
   to G and shows nothing), then the line `G` shows the figure with all its objects.
   The same for space: `H = Graphic3D()`, then `H.Plot3D(x y)`, `H.Draw(Sphere((0,0,0), 1))`, then `H`.
   3D figures use WebGL (Plotly); where WebGL is missing (some Linux web views) a simpler canvas view is used

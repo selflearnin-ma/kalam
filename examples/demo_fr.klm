@@ -53,7 +53,25 @@
    "color": null
   },
   {
-   "text": "Draw(f, T)",
+   "text": "G = Graphic()",
+   "block": 7,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Plot(f)",
+   "block": 7,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Draw(T)",
+   "block": 7,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G",
    "block": 7,
    "visible": true,
    "color": null
@@ -131,7 +149,7 @@
    "color": null
   },
   {
-   "text": "Draw(g)",
+   "text": "Plot(g)",
    "block": 22,
    "visible": true,
    "color": null
@@ -155,7 +173,7 @@
    "color": null
   },
   {
-   "text": "Draw(D)",
+   "text": "Represent(D)",
    "block": 29,
    "visible": true,
    "color": null

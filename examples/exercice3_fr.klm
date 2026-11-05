@@ -178,7 +178,25 @@
    "color": null
   },
   {
-   "text": "G.Draw(f, y = 1/3, y = -1, (1, 1/3), (-1, -1))",
+   "text": "G.Plot(f)",
+   "block": 31,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Represent(y = 1/3)",
+   "block": 31,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Represent(y = -1)",
+   "block": 31,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Draw((1, 1/3), (-1, -1))",
    "block": 31,
    "visible": true,
    "color": null

@@ -16,8 +16,9 @@ x, y, z, t = sp.symbols('x y z t')
 # ---------------------------------------------------------------- objects
 class Graph:
     """Graph of y = expr(var) on [a, b] (a, b None = whole view)."""
-    def __init__(self, expr, var=x, a=None, b=None):
+    def __init__(self, expr, var=x, a=None, b=None, source=None):
         self.expr, self.var, self.a, self.b = sp.sympify(expr), var, a, b
+        self.source = source      # the function it was made from (Plot(f)): its name labels the curve
 
     def _latex(self, printer):
         dom = '' if self.a is None else r',\ %s \in [%s, %s]' % (
@@ -441,8 +442,8 @@ def Tangent(f, a):
     if isinstance(a, sp.Circle):
         return _one(a.tangent_lines(_pt(f)))
     e, v = _body(f)
-    d = sp.diff(e, v)
-    return sp.Eq(y, sp.expand(d.subs(v, a) * (x - a) + e.subs(v, a)))
+    m, b = sp.diff(e, v).subs(v, a), e.subs(v, a)
+    return sp.Line(sp.Point(a, b), sp.Point(a + 1, b + m))      # a line: drawn by Draw, shown as y = mx + p
 
 
 def Vector(*a):
@@ -751,13 +752,37 @@ def Graphic3D():
     return Figure([], 3)
 
 
+_GEOMETRIC = (sp.Point, GeometryEntity, LinearEntity3D, sp.Plane, SphereObj, Circle3D, Polygon3D, Solid, Vec, Curve)
+
+
+def _geometric(objs):
+    """The objects of Draw / Draw3D: geometric only (functions go to Plot, equations and sets to Represent)."""
+    for o in objs:
+        if isinstance(o, Figure):                    # G.Draw(...) adds to a graphic: already checked
+            continue
+        if isinstance(o, list):
+            _geometric(o)
+            continue
+        if isinstance(o, tuple) and len(o) in (2, 3):
+            continue                                 # a point written in place
+        if isinstance(o, _GEOMETRIC) or (isinstance(o, Surface) and len(o.comps) == 3):
+            continue
+        if isinstance(o, (sp.Lambda, Graph, Surface)):
+            raise ValueError('a function is drawn with Plot (Plot3D in space): Plot(f), or G.Plot(f) in a graphic')
+        if isinstance(o, (sp.Rel, sp.And, sp.Set)):
+            raise ValueError('an equation or a set is drawn with Represent (Represent3D in space), or G.Represent(...)')
+        raise ValueError('Draw draws geometric objects (points, lines, circles, polygons, vectors, solids...): %s' % (o,))
+
+
 def Draw(*objs):
-    """Draw(f, A, c, ...): a figure with these objects (2D or 3D)."""
+    """Draw(A, s, c, ...): a figure with these geometric objects (2D or 3D)."""
+    _geometric(objs)
     return Figure(objs)
 
 
 def Draw3D(*objs):
-    """Draw3D(S, P, ...): a 3D figure with these objects."""
+    """Draw3D(S, P, ...): a 3D figure with these geometric objects."""
+    _geometric(objs)
     return Figure(objs, 3)
 
 
@@ -832,28 +857,36 @@ def Represent3D(*conds):
     return Figure(items, 3)
 
 
-def Plot(f, a=None, b=None):
-    """Plot(f) | Plot(f, a, b): figure with the graph of f."""
-    e, v = _body(f)
-    return Figure([Graph(e, v, a, b)])
+def Plot(*args):
+    """Plot(f) | Plot(f, g, ...) | Plot(f, a, b): figure with the graphs of the functions (on [a, b])."""
+    fs = [a for a in args if isinstance(a, sp.Lambda) or (isinstance(a, sp.Basic) and a.free_symbols)]
+    bounds = [a for a in args if a not in fs]
+    if not fs or len(bounds) not in (0, 2):
+        raise ValueError('Plot(f), Plot(f, g) or Plot(f, a, b)')
+    out = []
+    for f in fs:
+        if isinstance(f, (sp.Rel, sp.And)):
+            raise ValueError('an equation or an inequality is drawn with Represent(...)')
+        e, v = _body(f)
+        if isinstance(f, sp.Lambda) and len(f.variables) == 2:
+            raise ValueError('a function of two variables is drawn in space: Plot3D(f)')
+        out.append(Graph(e, v, *(bounds or (None, None)), source=f))
+    return Figure(out, 2)
+
+
+def Plot3D(f):
+    """Plot3D(f) | Plot3D(expr in x, y): 3D figure of the surface z = f(x, y)."""
+    if isinstance(f, (sp.Rel, sp.And)):
+        raise ValueError('an equation is drawn with Represent3D(...)')
+    if isinstance(f, sp.Lambda):
+        return Figure([Surface([f.expr.subs(dict(zip(f.variables, (x, y))))])], 3)
+    return Figure([Surface([f])], 3)
 
 
 def ParametricCurve(*a):
     """ParametricCurve(x(t), y(t), t, a, b) or with z(t) before t."""
     *comps, var, lo, hi = a
     return Curve(comps, var, lo, hi)
-
-
-def Plot3D(f):
-    """Plot3D(f) | Plot3D(expr in x, y): 3D figure of the surface z = f(x, y)."""
-    if isinstance(f, sp.Lambda):
-        return Figure([Surface([f.expr.subs(dict(zip(f.variables, (x, y))))])])
-    if isinstance(f, sp.Eq):           # x^2 + y^2 + z = 0: one surface per solution for z
-        sols = [e for e in sp.solve(f, z) if e.free_symbols <= {x, y}]
-        if not sols:
-            raise ValueError('cannot write %s as z = f(x, y)' % f)
-        return Figure([Surface([e]) for e in sols])
-    return Figure([Surface([f])])
 
 
 def ParametricSurface(X, Y, Z, u, u0, u1, v, v0, v1):

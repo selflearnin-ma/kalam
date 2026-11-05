@@ -157,7 +157,7 @@ def test_user_command():
 def test_exports():
     s = run('A = (1, 2)', 'f(x) = x^2', 'k = Slider(0, 3)', 'T = Tangent(f, k)', 'Solve(f(x) = 4, x)',
             'c = Circle(A, 2)', 'Plot(sin(x), 0, pi)', 'u = ParametricCurve(cos(t), sin(t), t, 0, 2pi)',
-            'Draw(f, A, c, T, u)')
+            'Draw(A, c, T, u)', 'Plot(f)')
     with tempfile.TemporaryDirectory() as d:
         py = os.path.join(d, 'out.py')
         with open(py, 'w', encoding='utf-8') as f:
@@ -165,38 +165,39 @@ def test_exports():
         r = subprocess.run([sys.executable, py], capture_output=True, text=True, encoding='utf-8',
                            env=dict(os.environ, PYTHONIOENCODING='utf-8'))   # Windows consoles are cp1252
         assert r.returncode == 0, r.stderr
-        assert 'Eq(y, 2*x - 1)' in r.stdout          # tangent at k = 1
+        assert 'Line2D(Point2D(1, 1), Point2D(2, 3))' in r.stdout          # tangent at k = 1: y = 2x - 1
         klm = os.path.join(d, 'a.klm')
         save_klm(s, klm)
         s2, _, _ = load_klm(klm, s.registry)
         assert [c.latex for c in s2.cells] == [c.latex for c in s.cells]
     tex = to_latex(s)
     assert '\\begin{document}' in tex and '\\left\\{-2, 2\\right\\}' in tex   # Solve(f(x) = 4, x)
-    assert tex.count('\\begin{tikzpicture}') == 2 and '\\usepackage{tkz-fct}' in tex   # Plot(...) and Draw(...)
+    assert tex.count('\\begin{tikzpicture}') == 3 and '\\usepackage{tkz-fct}' in tex   # Plot(sin), Draw(...), Plot(f)
     fig = figure_tkz(s)
     assert '\\tkzDefPoint(1,2){A}' in fig and '\\tkzFct' in fig and '\\tkzDrawCircle' in fig
-    assert fig.count('\\begin{tikzpicture}') == 2
+    assert fig.count('\\begin{tikzpicture}') == 3
 
 
 def test_figures():
     s = Session()
-    for t in ('f(x) = x^2 - 2x - 3', 'A = (-2, 1)', 'c = Circle(A, 2)', 'Draw(f, A, c)', 'p = Draw(f);', 'p',
+    for t in ('f(x) = x^2 - 2x - 3', 'A = (-2, 1)', 'c = Circle(A, 2)', 'Draw(A, c)', 'p = Plot(f);', 'p',
               'Plot(sin(x), 0, pi)', 'Plot3D(x y)', 'Draw(A, Sphere((0,0,0), 1))', 'Draw(3)'):
         s.add_cell(t)
     s.evaluate_all()
     shows = [c.shows_figure for c in s.cells]
     assert shows == [False, False, False, True, False, True, True, True, False, False]   # only drawing commands
-    assert s.cells[3].labels == ['f', 'A', 'c'] and s.cells[3].latex == ''
-    assert 'either 2D or 3D' in s.cells[8].error and 'cannot be drawn' in s.cells[9].error
+    assert s.cells[3].labels == ['A', 'c'] and s.cells[3].latex == ''
+    assert 'either 2D or 3D' in s.cells[8].error and 'geometric objects' in s.cells[9].error
     # several objects added to one graphic, shown where its name is typed
     s.add_cell('G = Graphic()')
-    s.add_cell('G.Draw(f, A)')
+    s.add_cell('G.Plot(f)')
+    s.add_cell('G.Draw(A)')
     s.add_cell('G.Plot(sin(x));')
     s.add_cell('G.Draw(c)')
     s.add_cell('G')
     s.evaluate_all()
-    g = s.cells[-5:]
-    assert [c.error for c in g] == [None] * 5 and [c.shows_figure for c in g] == [False] * 4 + [True]
+    g = s.cells[-6:]
+    assert [c.error for c in g] == [None] * 6 and [c.shows_figure for c in g] == [False] * 5 + [True]
     assert len(g[-1].value.items) == 4 and g[-1].labels[:2] == ['f', 'A']
     s.move_point(s.cells[1], 0, 0)
     assert s.cells[-1].value.items[1] == sp.Point(0, 0)
@@ -205,10 +206,10 @@ def test_figures():
     s.add_cell('H = Graphic3D()')
     s.add_cell('H.Plot3D(x y)')
     s.add_cell('H.Draw(Sphere((0, 0, 0), 1))')
-    s.add_cell('H.Plot3D(x^2 + y^2 + z = 0)')
+    s.add_cell('H.Represent3D(x^2 + y^2 + z = 0)')
     s.add_cell('H.Draw((2, -2, 3))')
     s.add_cell('H')
-    s.add_cell('H.Draw(f)')
+    s.add_cell('H.Plot(f)')
     s.add_cell('K = Graphic()')
     s.add_cell('K.Draw(Sphere((0, 0, 0), 1))')
     s.evaluate_all()
@@ -217,7 +218,7 @@ def test_figures():
     assert [c.error for c in h[:4]] == [None] * 4 and h[3].shows_figure and len(h[3].value.items) == 4
     assert 'a 3D graphic draws 3D objects' in h[4].error and 'a 2D graphic draws 2D objects' in h[6].error
     from kalam.export import figure_window
-    assert figure_window(s.cells[3].value.items) == [-6, 6, -5, 11]    # A, c and the parabola (|y| <= 10) on [-6, 6]
+    assert figure_window(s.cells[3].value.items + s.cells[5].value.items) == [-6, 6, -5, 11]    # A, c and the parabola (|y| <= 10)
 
 
 def test_tables():
@@ -292,7 +293,7 @@ def test_move_keeps_values():
     # a cell moves only where every variable keeps its definition (drag and drop, ↑ ↓)
     from kalam.engine import DependencyError
     s = Session()
-    for t in ('a = 2', 'f(x) = a x^2', 'G = Graphic()', 'G.Draw(f)', 'G', '"{{f(1)}}"', 'a = 5\nb = a + 1'):
+    for t in ('a = 2', 'f(x) = a x^2', 'G = Graphic()', 'G.Plot(f)', 'G', '"{{f(1)}}"', 'a = 5\nb = a + 1'):
         s.insert_block(len(s.blocks()), t)
     for i, j, var in [(1, 0, 'a'), (3, 1, 'G'), (4, 2, 'G'), (5, 0, 'f')]:
         try:
@@ -303,7 +304,7 @@ def test_move_keeps_values():
     assert [s.block_lines(b)[0].text for b in s.blocks()][:2] == ['a = 2', 'f(x) = a x^2']    # nothing moved
     s.move_block_to(s.blocks()[2], 0)                  # G = Graphic() uses nothing: anywhere before its uses
     s.move_block_to(s.blocks()[6], 5)
-    assert [s.block_lines(b)[0].text for b in s.blocks()] == ['G = Graphic()', 'a = 2', 'f(x) = a x^2', 'G.Draw(f)', 'G', 'a = 5', '"{{f(1)}}"']
+    assert [s.block_lines(b)[0].text for b in s.blocks()] == ['G = Graphic()', 'a = 2', 'f(x) = a x^2', 'G.Plot(f)', 'G', 'a = 5', '"{{f(1)}}"']
     assert all(c.error is None for c in s.cells)
 
 
@@ -313,23 +314,23 @@ def test_web_bridge():
     import io
     from kalam import web
     web.new()
-    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nDraw(f, A, D)\nPlot3D(x y)')
+    web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nG = Graphic()\nG.Plot(f)\nG.Draw(A)\nG.Represent(D)\nG\nPlot3D(x y)')
     lines = json.loads(web.state())['lines']
-    assert [('figure' in ln) for ln in lines] == [False, False, False, True, True]     # only drawing commands
-    fig = lines[3]['figure']
+    assert [('figure' in ln) for ln in lines] == [False] * 7 + [True, True]     # only where a figure is shown
+    fig = lines[7]['figure']
     assert fig['dim'] == 2 and [it['name'] for it in fig['items']] == ['f', 'A', 'D']
     assert fig['items'][0]['scene'] == [dict(k='fx', v='x', js='Math.pow(x, 2)', lo=None, hi=None)]
     assert fig['items'][1]['line'] == 1 and fig['items'][1]['scene'][0]['free']       # A can be dragged
-    assert fig['items'][2]['scene'][0]['op'] == '<' and lines[4]['figure']['dim'] == 3
+    assert fig['items'][2]['scene'][0]['op'] == '<' and lines[8]['figure']['dim'] == 3
     web.move_point(1, 3, 4)
     assert json.loads(web.state())['lines'][1]['text'] == 'A = (3, 4)'
     web.insert_cell(1, '"texte"')
     assert json.loads(web.klm_text())['cells'][-1]['text'] == '"texte"'
     # figure options: kept in the file, when the line is edited unchanged, and used by the tkz export
-    web.set_style(3, json.dumps({'grid': False, 'objs': {'f': {'color': '#ff0000', 'dash': True}, 'D': {'hide': True}}}))
+    web.set_style(7, json.dumps({'grid': False, 'objs': {'f': {'color': '#ff0000', 'dash': True}, 'D': {'hide': True}}}))
     web.load_klm_text(web.klm_text())
-    web.set_cell(0, 'f(x) = x^2\nA = (3, 5)\nD = x^2 + y^2 < 4\nDraw(f, A, D)\nPlot3D(x y)')
-    assert json.loads(web.state())['lines'][3]['figure']['style']['objs']['f'] == {'color': '#ff0000', 'dash': True}
+    web.set_cell(0, 'f(x) = x^2\nA = (3, 5)\nD = x^2 + y^2 < 4\nG = Graphic()\nG.Plot(f)\nG.Draw(A)\nG.Represent(D)\nG\nPlot3D(x y)')
+    assert json.loads(web.state())['lines'][7]['figure']['style']['objs']['f'] == {'color': '#ff0000', 'dash': True}
     fig = web.export_text('fig', 'fr')
     assert 'tkzGrid' not in fig and 'red,255;green,0;blue,0},dashed]' in fig
     names = zipfile.ZipFile(io.BytesIO(web.export_zip('k'))).namelist()

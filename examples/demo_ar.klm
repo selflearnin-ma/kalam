@@ -53,7 +53,25 @@
    "color": null
   },
   {
-   "text": "Draw(f, م)",
+   "text": "G = Graphic()",
+   "block": 40,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Plot(f)",
+   "block": 40,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Draw(م)",
+   "block": 40,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G",
    "block": 40,
    "visible": true,
    "color": null
