@@ -522,7 +522,7 @@ class Session:
                 used = set(_IDENT.findall(' '.join(re.findall(r'\{\{(.*?)\}\}', c.text))))
             else:
                 used = set(_IDENT.findall(c.norm or ''))
-            for u in used & defined:
+            for u in sorted(used & defined):           # sorted: the same variable is named every time
                 out[c.id, u] = last.get(u)
             if c.name:
                 last[c.name] = c.id
