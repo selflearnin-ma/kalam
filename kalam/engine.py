@@ -20,6 +20,7 @@ import sympy as sp
 from sympy.geometry.line import LinearEntity3D
 from sympy.geometry.entity import GeometryEntity
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations
+from sympy.printing.latex import LatexPrinter
 
 from . import runtime
 from .commands import Registry, migrate
@@ -305,6 +306,7 @@ class Session:
         loc = dict(self.env)
         loc.update(local or {})
         try:
+            src = self._held(src, loc, g)
             v = parse_expr(src, local_dict=loc, global_dict=g,
                            transformations=standard_transformations, evaluate=True)
         except KalamError:
@@ -316,6 +318,29 @@ class Session:
         if isinstance(v, tuple):
             v = list(v)
         return v
+
+    def _held(self, src, loc, g):
+        """Hold(2 + 3*4): the expression as written, not computed nor simplified. Each Hold(...) is parsed apart
+        without evaluation and stands in src as a name bound in loc."""
+        out, k = '', 0
+        while True:
+            m = re.search(r'(?<![\w.])Hold\(', src)
+            if not m:
+                return out + src
+            depth, j = 1, m.end()
+            while j < len(src) and depth:
+                depth += {'(': 1, ')': -1}.get(src[j], 0)
+                j += 1
+            if depth:
+                raise KalamError('syntax: missing ")"')
+            inner = self._held(src[m.end():j - 1], loc, g)
+            name = '_hold%d_%d' % (len(out), k)
+            g2 = dict(g, Add=sp.Add, Mul=sp.Mul, Pow=sp.Pow)     # parse_expr(evaluate=False) writes these
+            loc[name] = parse_expr(inner, local_dict=loc, global_dict=g2, transformations=standard_transformations, evaluate=False)
+            if len(_HELD) > 5000:
+                _HELD.clear()
+            _HELD[id(loc[name])] = loc[name]       # printed as written (kept here, so its id stays its own)
+            out, src, k = out + src[:m.start()] + name, src[j:], k + 1
 
     def evaluate_expression(self, text):
         return self._eval(self.normalizer()(text))
@@ -588,7 +613,21 @@ def line_equation(line):
     return sp.Eq(X, sp.solve(eq, X)[0])
 
 
+_HELD = {}     # id -> expression made by Hold(...): printed in the order it was typed
+
+
+class _HeldPrinter(LatexPrinter):
+    """LaTeX of an expression kept as written: terms in their order, 1/2 as ½ (not 1·½)."""
+    def _print_Mul(self, e):
+        rest = [a for a in e.args if a != 1]
+        if rest and len(rest) < len(e.args):
+            return self._print(rest[0] if len(rest) == 1 else sp.Mul(*rest, evaluate=False))
+        return super()._print_Mul(e)
+
+
 def value_latex(v):
+    if id(v) in _HELD:
+        return _HeldPrinter(dict(order='none')).doprint(v)
     L = sp.latex
     if isinstance(v, sp.Point):
         return r'\left(%s\right)' % ', '.join(L(a) for a in v.args)

@@ -73,9 +73,13 @@ def test_example_exercise():
     lines = json.loads(web.state())['lines']
     assert not [ln['error'] for ln in lines if ln.get('error')]
     assert any('D_f = \\mathbb{R}' in (ln.get('parts') or [(0, '')])[0][1] for ln in lines)
-    # a solution of Solve(...) used as a number: S[1] is the smallest
-    s = run('f(x) = x^2 - 2x - 3', 'S = Solve(f(x) = 0, x)', 'S[1]', 'S[2]', 'f(S[2] + 1)', 'a = Solve(x^2 = 2, x)[2]')
+    # a solution of Solve(...) used as a number: S[0] is the smallest (numbered from 0, like lists)
+    s = run('f(x) = x^2 - 2x - 3', 'S = Solve(f(x) = 0, x)', 'S[0]', 'S[1]', 'f(S[1] + 1)', 'a = Solve(x^2 = 2, x)[1]')
     assert [c.value for c in s.cells[2:5]] == [-1, 3, 5] and s.env['a'] == sp.sqrt(2)
+    # Hold(...): kept as typed, in that order
+    s = run('Hold(2 * 3^2 - 4/6)', 'e1 = Hold(1/2 + 1/3)', 'e1', 'Simplify(e1)', '"{{Hold(3x - x)}} = {{3x - x}}"')
+    assert s.cells[0].latex == r'2 \cdot 3^{2} - \frac{4}{6}' and s.cells[2].latex == r'\frac{1}{2} + \frac{1}{3}'
+    assert s.cells[3].value == sp.Rational(5, 6) and s.cells[4].parts == [(False, '$3 x - x$ = $2 x$')]
     assert run('Domain(1/(x - 2))').cells[0].value == sp.Union(sp.Interval.open(-sp.oo, 2), sp.Interval.open(2, sp.oo))
 
 

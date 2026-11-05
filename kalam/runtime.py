@@ -283,16 +283,21 @@ def Factor(e):
 
 
 def _set_item(self, k):
-    """S[1], S[2], ...: the elements of a solution set in increasing order (S[1] is the smallest)."""
+    """S[0], S[1], ...: the elements of a solution set in increasing order (S[0] is the smallest, as in Python lists)."""
     el = list(self.args)
     if all(e.is_real for e in el):
         el.sort(key=lambda e: float(e))
-    if not 1 <= int(k) <= len(el):
-        raise IndexError('this set has %d element(s): use S[1] to S[%d]' % (len(el), len(el)) if el else 'this set is empty')
-    return el[int(k) - 1]
+    if not 0 <= int(k) < len(el):
+        raise IndexError('this set has %d element(s): use S[0] to S[%d]' % (len(el), len(el) - 1) if el else 'this set is empty')
+    return el[int(k)]
 
 
-sp.FiniteSet.__getitem__ = _set_item     # so a = Solve(f(x) = 0, x)[1] is a number
+sp.FiniteSet.__getitem__ = _set_item     # so a = Solve(f(x) = 0, x)[0] is a number
+
+
+def Hold(e):
+    """Hold(2 + 3*4): the expression as written, not computed (in the notebook; here it is computed)."""
+    return e
 
 
 def Domain(f):

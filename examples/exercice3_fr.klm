@@ -82,7 +82,7 @@
    "color": null
   },
   {
-   "text": "\"La solution est $x_0 = {{S[1]}}$ et son image est $f(x_0) = {{f(S[1])}}$.\"",
+   "text": "\"La solution est $x_0 = {{S[0]}}$ et son image est $f(x_0) = {{f(S[0])}}$.\"",
    "block": 14,
    "visible": true,
    "color": null
@@ -100,7 +100,7 @@
    "color": null
   },
   {
-   "text": "\"De même $f(x) = -1$ a pour solution $x_1 = {{m[1]}}$ : $-1$ est la valeur minimale de $f$, atteinte en $x_1$.\"",
+   "text": "\"De même $f(x) = -1$ a pour solution $x_1 = {{m[0]}}$ : $-1$ est la valeur minimale de $f$, atteinte en $x_1$.\"",
    "block": 14,
    "visible": true,
    "color": null

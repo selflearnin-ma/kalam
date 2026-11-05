@@ -36,6 +36,7 @@ BUILTINS = [
     ('Translate', 'Translation', 'إزاحة', 'transform', 'o, u'),
     ('Dilate', 'Homothétie', 'تحاك', 'transform', 'o, k, O'),
     ('Simplify', 'Simplifier', 'تبسيط', 'algebra', 'e'),
+    ('Hold', None, None, 'algebra', '2 + 3*4'),
     ('Expand', 'Développer', 'نشر', 'algebra', 'e'),
     ('Factor', 'Factoriser', 'تعميل', 'algebra', 'e'),
     ('Solve', 'Résoudre', 'حل', 'algebra', 'x^2 = 4, x'),
