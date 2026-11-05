@@ -124,6 +124,13 @@ def _scene(v, free):
     if isinstance(v, sp.Equality) and v.lhs == Y and not v.rhs.has(Y):
         js = _js(v.rhs, 'x')
         return [dict(k='fx', v='x', js=js, lo=None, hi=None)] if js else []
+    if isinstance(v, sp.And):      # a system: the region where all conditions hold, each boundary inside it
+        ops = {sp.Equality: '=', sp.StrictLessThan: '<', sp.LessThan: '<=', sp.StrictGreaterThan: '>', sp.GreaterThan: '>='}
+        cs = [(_js(c.lhs - c.rhs, 'xy'), ops.get(type(c))) for c in v.args]
+        if any(js is None or op is None for js, op in cs):
+            return []
+        return [dict(k='imp', js=js, op=op, shade=k == 0, mask=[[j, o] for i, (j, o) in enumerate(cs) if i != k])
+                for k, (js, op) in enumerate(cs)]
     if isinstance(v, sp.Rel):
         op = {sp.Equality: '=', sp.StrictLessThan: '<', sp.LessThan: '<=',
               sp.StrictGreaterThan: '>', sp.GreaterThan: '>='}.get(type(v))

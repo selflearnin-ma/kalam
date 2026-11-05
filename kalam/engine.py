@@ -723,7 +723,7 @@ def dimension(v):
         if len(v.variables) == 2 and v.expr.free_symbols <= set(v.variables):
             return 3
         return None
-    if isinstance(v, sp.Rel):
+    if isinstance(v, (sp.Rel, sp.And)):
         names = {s.name for s in v.free_symbols}
         if names and names <= {'x', 'y', 'z'}:
             return 3 if 'z' in names else 2

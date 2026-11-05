@@ -756,6 +756,82 @@ def Draw(*objs):
     return Figure(objs)
 
 
+def Draw3D(*objs):
+    """Draw3D(S, P, ...): a 3D figure with these objects."""
+    return Figure(objs, 3)
+
+
+def _cond(c):
+    """A condition of Represent: an equation or inequality (a set in x, y, z)."""
+    c = sp.sympify(c)
+    if not isinstance(c, (sp.Rel, sp.And)):
+        raise ValueError('Represent(...) takes equations or inequalities in x, y (z): x^2 + y^2 = 4, x + y - 1 > 0')
+    return c
+
+
+def Represent(*conds):
+    """Represent(x^2 + y^2 = 4) | Represent(x + y - 1 > 0) | Represent(x > 0, y > 0, x + y < 2): the set of points
+    (x, y) satisfying the conditions, in the plane (a curve, or a shaded region for inequalities)."""
+    cs = [_cond(c) for c in conds]
+    if any(c.has(z) for c in cs):
+        raise ValueError('a condition with z is a set of space: Represent3D(...)')
+    return Figure([cs[0] if len(cs) == 1 else sp.And(*cs, evaluate=False)], 2)
+
+
+def _surface3d(e):
+    """The surface e(x, y, z) = 0: a plane, a sphere, or pieces z = f(x, y) (or y = ..., x = ...)."""
+    e = sp.expand(e)
+    p = sp.Poly(e, x, y, z) if e.free_symbols <= {x, y, z} else None
+    if p is not None and p.total_degree() == 1:
+        n = [p.coeff_monomial(v) for v in (x, y, z)]
+        k = next(i for i, c in enumerate(n) if c != 0)
+        P = [0, 0, 0]
+        P[k] = -p.coeff_monomial(1) / n[k]
+        return [sp.Plane(sp.Point3D(*P), normal_vector=n)]
+    if p is not None and p.total_degree() == 2:
+        a = [p.coeff_monomial(v**2) for v in (x, y, z)]
+        cross = [p.coeff_monomial(m) for m in (x * y, y * z, x * z)]
+        if a[0] != 0 and a[0] == a[1] == a[2] and not any(cross):       # a sphere: complete the squares
+            b = [p.coeff_monomial(v) for v in (x, y, z)]
+            C = [-bi / (2 * a[0]) for bi in b]
+            r2 = sum(c**2 for c in C) - p.coeff_monomial(1) / a[0]
+            if r2.is_positive:
+                return [SphereObj(sp.Point3D(*C), sp.sqrt(r2))]
+    if p is not None and p.total_degree() == 2:   # a circle in two variables, the third free: a cylinder
+        for free, (u, w) in ((z, (x, y)), (y, (x, z)), (x, (y, z))):
+            if e.has(free):
+                continue
+            a2 = [p.coeff_monomial(v**2) for v in (u, w)]
+            if a2[0] != 0 and a2[0] == a2[1] and p.coeff_monomial(u * w) == 0:
+                C = [-p.coeff_monomial(v) / (2 * a2[0]) for v in (u, w)]
+                r2 = C[0]**2 + C[1]**2 - p.coeff_monomial(1) / a2[0]
+                if r2.is_positive:
+                    t, h = sp.Symbol('t'), sp.Symbol('h')
+                    pos = {u: C[0] + sp.sqrt(r2) * sp.cos(t), w: C[1] + sp.sqrt(r2) * sp.sin(t), free: h}
+                    return [Surface([pos[x], pos[y], pos[z]], t, (0, 2 * sp.pi), h, (-5, 5))]
+    R = (-5, 5)
+    for v, (u, w) in ((z, (x, y)), (y, (x, z)), (x, (y, z))):
+        if not e.has(v):
+            continue
+        sols = [s for s in sp.solve(e, v) if s.free_symbols <= {u, w}]
+        if sols:
+            if v == z:
+                return [Surface([s]) for s in sols]
+            return [Surface([s if c == v else c for c in (x, y, z)], u, R, w, R) for s in sols]
+    raise ValueError('cannot draw %s = 0' % e)
+
+
+def Represent3D(*conds):
+    """Represent3D(x^2 + y^2 + z^2 = 4) | Represent3D(x + y + z = 1) | Represent3D(x^2 + y^2 = 1): the surfaces of
+    space given by the conditions (for an inequality, the surface that bounds the region)."""
+    items = []
+    for c in conds:
+        c = _cond(c)
+        for r in (c.args if isinstance(c, sp.And) else [c]):
+            items += _surface3d(r.lhs - r.rhs)
+    return Figure(items, 3)
+
+
 def Plot(f, a=None, b=None):
     """Plot(f) | Plot(f, a, b): figure with the graph of f."""
     e, v = _body(f)

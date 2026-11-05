@@ -154,6 +154,8 @@ The palette shows them in this order: Keyboard, then the groups below. Geometry 
 plane and in space (in space Reflect also takes a plane, and Rotate turns around an axis: `Rotate(A, pi/2, Line(O, B))`).
 Sets can also be written with symbols: `A ∪ B`, `A ∩ B`, `A ∖ B`, `ℕ ℤ ℚ ℝ ∅` (keys on the Keyboard tab);
 intervals are shown as [a ; b], ]a ; b[.
+`Represent(...)` draws a set of the plane given by equations or inequalities (several: their system),
+`Represent3D(...)` the surfaces of space (planes, spheres, cylinders, z = f(x, y), ...).
 
 **Calculus**
 
@@ -199,6 +201,8 @@ intervals are shown as [a ; b], ]a ; b[.
 | Cardinal | `Cardinal(A)` |
 | Inf | `Inf(A)` |
 | Sup | `Sup(A)` |
+| Represent | `Represent(x^2 + y^2 <= 4, x + y - 1 > 0)` |
+| Represent3D | `Represent3D(x^2 + y^2 + z^2 = 4)` |
 
 **Functions**
 
@@ -209,6 +213,10 @@ intervals are shown as [a ; b], ]a ; b[.
 | Integral | `Integral(f, a, b)` |
 | Limit | `Limit(f, oo)` |
 | Tangent | `Tangent(f, a)` |
+| Plot | `Plot(f, a, b)` |
+| Plot3D | `Plot3D(f)` |
+| SignTable | `SignTable(x^2 - 4)` |
+| VariationTable | `VariationTable(f)` |
 
 **Polynomials**
 
@@ -280,16 +288,13 @@ intervals are shown as [a ; b], ]a ; b[.
 |---|---|
 | Graphic | `Graphic()` |
 | Draw | `Draw(f, A, c)` |
-| Plot | `Plot(f, a, b)` |
+| Draw3D | `Draw3D(S, P)` |
 | ParametricCurve | `ParametricCurve(cos(t), sin(t), t, 0, 2pi)` |
 | Slider | `Slider(-5, 5, 0.1)` |
 | Graphic3D | `Graphic3D()` |
-| Plot3D | `Plot3D(x^2 - y^2)` |
 | ParametricSurface | `ParametricSurface(cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2)` |
 | Table | `Table(3, 2)` |
 | Row | `Row(T, a, b, c)` |
-| SignTable | `SignTable(x^2 - 4)` |
-| VariationTable | `VariationTable(f)` |
 
 **Matrices**
 

@@ -117,6 +117,20 @@ def test_geometry_in_space_and_sets():
     assert s.cells[6].value is sp.true and s.cells[7].value == sp.Range(-1, 4) and s.cells[8].latex == r'\mathbb{R}'
 
 
+def test_represent_sets():
+    import json
+    from kalam import web
+    web.new()
+    web.set_cell(0, 'Represent(x^2 + y^2 = 4)\nRepresent(x > 0, y > 0, x + y < 2)\nRepresent3D(x^2 + y^2 + z^2 - 2x = 3)\n'
+                    'Represent3D(x + y + z = 1)\nRepresent3D(x^2 + y^2 = 1)\nDraw3D(Sphere((0,0,0), 1))\nRepresent(x + z > 0)')
+    lines = json.loads(web.state())['lines']
+    kinds = [[sc['k'] for it in ln['figure']['items'] for sc in it['scene']] if ln.get('figure') else ln.get('error') for ln in lines]
+    assert kinds[:6] == [['imp'], ['imp'] * 3, ['sph'], ['plane'], ['psurf'], ['sph']] and 'Represent3D' in kinds[6]
+    sph = lines[2]['figure']['items'][0]['scene'][0]
+    assert sph['c'] == [1, 0, 0] and sph['r'] == 2                 # (x - 1)^2 + y^2 + z^2 = 4
+    assert lines[1]['figure']['items'][0]['scene'][0]['mask'] and lines[1]['figure']['items'][0]['scene'][0]['shade']
+
+
 def test_drawables():
     s = run('y = 2x + 1', 'x^2 + y^2 < 4', 'z = x y', 'S = Sphere((0,0,0), 1)', 'c = Circle((0,0), 2)', '3 + 4')
     assert [dimension(c.value) for c in s.cells] == [2, 2, 3, 3, 2, None]
