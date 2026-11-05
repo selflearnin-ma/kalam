@@ -282,6 +282,12 @@ def Factor(e):
     return sp.factor(e)
 
 
+def Domain(f):
+    """Domain(f): the real numbers where f is defined (D_f)."""
+    e, v = _body(f)
+    return sp.calculus.util.continuous_domain(e, v, sp.S.Reals)
+
+
 def Solve(eq, var=None, domain='R'):
     """Real solutions (equation, inequality or system)."""
     if isinstance(eq, (list, tuple)):

@@ -50,6 +50,7 @@ BUILTINS = [
     ('IsPrime', 'EstPremier', 'أولي', 'algebra', 'n'),
     ('Derivative', 'Dérivée', 'مشتقة', 'calculus', 'f'),
     ('Integral', 'Intégrale', 'تكامل', 'calculus', 'f, a, b'),
+    ('Domain', None, None, 'calculus', 'f'),
     ('Limit', 'Limite', 'نهاية', 'calculus', 'f, oo'),
     ('Series', 'DL', 'نشر_محدود', 'calculus', 'f, 0, 4'),
     ('Sum', 'Somme', 'مجموع', 'calculus', 'k^2, k, 1, n'),

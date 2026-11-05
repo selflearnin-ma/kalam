@@ -64,6 +64,18 @@ def test_old_names_are_updated():
     assert not isinstance(s.cells[-1].value, sp.Circle)
 
 
+def test_example_exercise():
+    # examples/exercice3_fr.klm: Domain, Factor, Solve, VariationTable, a graphic; no cell in error
+    from kalam import web
+    import json
+    path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'exercice3_fr.klm')
+    web.load_klm_text(open(path, encoding='utf-8').read())
+    lines = json.loads(web.state())['lines']
+    assert not [ln['error'] for ln in lines if ln.get('error')]
+    assert any('D_f = \\mathbb{R}' in (ln.get('parts') or [(0, '')])[0][1] for ln in lines)
+    assert run('Domain(1/(x - 2))').cells[0].value == sp.Union(sp.Interval.open(-sp.oo, 2), sp.Interval.open(2, sp.oo))
+
+
 def test_drawables():
     s = run('y = 2x + 1', 'x^2 + y^2 < 4', 'z = x y', 'S = Sphere((0,0,0), 1)', 'c = Circle((0,0), 2)', '3 + 4')
     assert [dimension(c.value) for c in s.cells] == [2, 2, 3, 3, 2, None]

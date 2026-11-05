@@ -1,0 +1,183 @@
+{
+ "format": "kalam",
+ "version": 2,
+ "lang": "fr",
+ "cells": [
+  {
+   "text": "\"Exercice 3 — On considère la fonction $f$ définie par $f(x) = \\dfrac{x}{x^2+x+1}$.\"",
+   "block": 1,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "f(x) = x / (x^2 + x + 1)",
+   "block": 1,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"1. Domaine de définition : $f(x)$ existe si et seulement si $x^2+x+1 \\neq 0$.\"",
+   "block": 4,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"Discriminant de $x^2+x+1$ : $\\Delta = {{1^2 - 4*1*1}} < 0$, donc $x^2+x+1$ ne s'annule jamais :\"",
+   "block": 4,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "Solve(x^2 + x + 1 = 0, x)",
+   "block": 4,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"D'où $D_f = {{Domain(f)}}$.\"",
+   "block": 4,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"2. Montrons que $-1 \\le f(x) \\le \\frac{1}{3}$ pour tout réel $x$ (on rappelle $x^2+x+1 > 0$).\"",
+   "block": 9,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"$f(x) + 1 = {{Factor(f(x) + 1)}} \\ge 0$, donc $f(x) \\ge -1$.\"",
+   "block": 9,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"$\\frac{1}{3} - f(x) = {{Factor(1/3 - f(x))}} \\ge 0$, donc $f(x) \\le \\frac{1}{3}$.\"",
+   "block": 9,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"Ainsi $f$ est bornée sur $\\mathbb{R}$ par $-1$ et $\\frac{1}{3}$.\"",
+   "block": 9,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"3. On cherche si $\\frac{1}{3}$ est atteint :\"",
+   "block": 14,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "Solve(f(x) = 1/3, x)",
+   "block": 14,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"$f(1) = {{f(1)}}$ et $f(x) \\le \\frac{1}{3}$ pour tout $x$ : $\\frac{1}{3}$ est la valeur maximale de $f$ sur $\\mathbb{R}$, atteinte en $x = 1$.\"",
+   "block": 14,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"De même $f(-1) = {{f(-1)}}$ : $-1$ est la valeur minimale de $f$, atteinte en $x=-1$.\"",
+   "block": 14,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"4. (a) Soient $x \\neq y$ deux réels. Le taux de variation de $f$ entre $x$ et $y$ est :\"",
+   "block": 19,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "T(x, y) = (f(x) - f(y)) / (x - y)",
+   "block": 19,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "Factor(T(x, y))",
+   "block": 19,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"On vérifie : $\\dfrac{f(x)-f(y)}{x-y} - \\dfrac{1-xy}{(x^2+x+1)(y^2+y+1)} = {{Simplify(T(x, y) - (1 - x y)/((x^2 + x + 1)(y^2 + y + 1)))}}$.\"",
+   "block": 19,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"4. (b) Le dénominateur $(x^2+x+1)(y^2+y+1)$ est strictement positif : le signe du taux est celui de $1 - xy$.\"",
+   "block": 24,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"• Sur $[1;+\\infty[$ : $x \\ge 1$ et $y \\ge 1$ avec $x \\neq y$, donc $xy > 1$ et $1 - xy < 0$ : $f$ est strictement décroissante.\"",
+   "block": 24,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"• Sur $[-1;1]$ : $|x| \\le 1$, $|y| \\le 1$ et $x \\neq y$, donc $xy < 1$ et $1 - xy > 0$ : $f$ est strictement croissante.\"",
+   "block": 24,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"• Sur $]-\\infty;-1]$ : $x \\le -1$ et $y \\le -1$ avec $x \\neq y$, donc $xy > 1$ et $1 - xy < 0$ : $f$ est strictement décroissante.\"",
+   "block": 24,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"Tableau de variations (avec $\\lim_{\\pm\\infty} f = {{Limit(f, oo)}}$) :\"",
+   "block": 24,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "VariationTable(f)",
+   "block": 24,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "\"Courbe de $f$ et ses bornes $y = -1$ et $y = \\frac{1}{3}$ :\"",
+   "block": 31,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G = Graphic()",
+   "block": 31,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G.Draw(f, y = 1/3, y = -1, (1, 1/3), (-1, -1))",
+   "block": 31,
+   "visible": true,
+   "color": null
+  },
+  {
+   "text": "G",
+   "block": 31,
+   "visible": true,
+   "color": null,
+   "style": {
+    "xmin": -6,
+    "xmax": 6,
+    "ymin": -1.5,
+    "ymax": 1,
+    "h": 300
+   }
+  }
+ ],
+ "commands": []
+}
