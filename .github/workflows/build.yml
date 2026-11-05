@@ -1,4 +1,4 @@
-# Builds Kalam (web core + Pyodide + Tauri) for every platform.
+# Builds SymNote (web core + Pyodide + Tauri) for every platform.
 # Actions tab -> build -> Run workflow: builds everything, then publishes a GitHub Release
 # named after the "release" field (e.g. v0.1.0; leave it empty to only attach files to the run).
 # Pushing a tag like v0.2.0 does the same.
@@ -82,12 +82,12 @@ jobs:
           else
             # no key configured: a new key each run (to update, uninstall the old app first)
             pass=kalam-ci; keytool -genkeypair -keystore ks.jks -alias kalam -keyalg RSA -keysize 2048 \
-              -validity 10000 -storepass "$pass" -keypass "$pass" -dname "CN=Kalam"
+              -validity 10000 -storepass "$pass" -keypass "$pass" -dname "CN=SymNote"
           fi
           bt=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
           mkdir -p apk
           "$bt/zipalign" -f 4 "$unsigned" aligned.apk
-          "$bt/apksigner" sign --ks ks.jks --ks-key-alias kalam --ks-pass "pass:$pass" --out apk/Kalam_android.apk aligned.apk
+          "$bt/apksigner" sign --ks ks.jks --ks-key-alias kalam --ks-pass "pass:$pass" --out apk/SymNote_android.apk aligned.apk
           ls -la apk
       - uses: actions/upload-artifact@v4
         with:
@@ -123,7 +123,7 @@ jobs:
           echo "${{ secrets.APPLE_API_KEY }}" > ~/private_keys/AuthKey_${APPLE_API_KEY}.p8
           export APPLE_API_KEY_PATH=~/private_keys/AuthKey_${APPLE_API_KEY}.p8
           npx tauri ios build --export-method debugging
-          mkdir -p ipa && find src-tauri/gen/apple/build -name '*.ipa' -exec cp {} ipa/Kalam_ios.ipa \;
+          mkdir -p ipa && find src-tauri/gen/apple/build -name '*.ipa' -exec cp {} ipa/SymNote_ios.ipa \;
       - name: Build IPA (unsigned)
         if: ${{ vars.APPLE_DEVELOPMENT_TEAM == '' }}
         run: |
@@ -146,7 +146,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
           app=$(find build/Build/Products -name '*.app' -path '*iphoneos*' | head -1)
           mkdir -p Payload && cp -R "$app" Payload/
-          mkdir -p "$GITHUB_WORKSPACE/ipa" && zip -qr "$GITHUB_WORKSPACE/ipa/Kalam_ios_unsigned.ipa" Payload
+          mkdir -p "$GITHUB_WORKSPACE/ipa" && zip -qr "$GITHUB_WORKSPACE/ipa/SymNote_ios_unsigned.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
           name: kalam-ios
@@ -169,8 +169,8 @@ jobs:
           TAG: ${{ inputs.release || github.ref_name }}
         run: |
           # apk names are generic (app-universal-debug.apk): give it a clear name
-          for f in $(find out/kalam-android -name '*.apk'); do mv "$f" "out/Kalam_${TAG#v}_android.apk"; done
+          for f in $(find out/kalam-android -name '*.apk'); do mv "$f" "out/SymNote_${TAG#v}_android.apk"; done
           files=$(find out -type f \( -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' -o -name '*.dmg' -o -name '*.apk' -o -name '*.ipa' \))
           # same version run again: replace the files of the existing release
-          gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "Kalam $TAG" --generate-notes $files \
+          gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "SymNote $TAG" --generate-notes $files \
             || gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber $files

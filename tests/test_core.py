@@ -221,6 +221,25 @@ def test_cells_of_several_lines():
     assert len(s.blocks()) == 3
 
 
+def test_move_keeps_values():
+    # a cell moves only where every variable keeps its definition (drag and drop, ↑ ↓)
+    from kalam.engine import DependencyError
+    s = Session()
+    for t in ('a = 2', 'f(x) = a x^2', 'G = Graphic()', 'G.Draw(f)', 'G', '"{{f(1)}}"', 'a = 5\nb = a + 1'):
+        s.insert_block(len(s.blocks()), t)
+    for i, j, var in [(1, 0, 'a'), (3, 1, 'G'), (4, 2, 'G'), (5, 0, 'f')]:
+        try:
+            s.move_block_to(s.blocks()[i], j)
+            assert False, (i, j)
+        except DependencyError as e:
+            assert e.args[0] == var
+    assert [s.block_lines(b)[0].text for b in s.blocks()][:2] == ['a = 2', 'f(x) = a x^2']    # nothing moved
+    s.move_block_to(s.blocks()[2], 0)                  # G = Graphic() uses nothing: anywhere before its uses
+    s.move_block_to(s.blocks()[6], 5)
+    assert [s.block_lines(b)[0].text for b in s.blocks()] == ['G = Graphic()', 'a = 2', 'f(x) = a x^2', 'G.Draw(f)', 'G', 'a = 5', '"{{f(1)}}"']
+    assert all(c.error is None for c in s.cells)
+
+
 def test_web_bridge():
     import json
     import zipfile

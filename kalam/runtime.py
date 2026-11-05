@@ -1,4 +1,4 @@
-"""Kalam runtime: every built-in command, written with SymPy only.
+"""SymNote runtime: every built-in command, written with SymPy only.
 
 This file is self-contained on purpose: the Python exporter copies it verbatim
 into exported scripts, so an exported notebook runs with nothing but SymPy.
@@ -494,7 +494,7 @@ def Plane(A, B, C=None):
 
 
 def Slider(lo, hi, step=None, value=None):
-    """A number moved by a slider; outside Kalam it is just its value."""
+    """A number moved by a slider; outside SymNote it is just its value."""
     return sp.nsimplify(lo if value is None else value)
 
 

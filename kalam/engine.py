@@ -1,4 +1,4 @@
-"""Kalam engine: turns notebook cells into SymPy objects.
+"""SymNote engine: turns notebook cells into SymPy objects.
 
 Input language (close to GeoGebra CAS / Desmos):
   A = (1, 2)            point (also A := Point(1, 2))
@@ -43,6 +43,13 @@ _METHOD = re.compile(r'^\s*([^\W\d]\w*)\s*\.\s*([^\W\d]\w*)\s*\((.*)\)\s*$', re.
 _NUM = r'-?\d+(?:\.\d+)?'
 _FREE_POINT = re.compile(r'^\s*(\w*)\s*\(\s*(%s)\s*,\s*(%s)\s*\)\s*$' % (_NUM, _NUM))
 _SLIDER = re.compile(r'^\s*(\w+)\s*\((.*)\)\s*$', re.S)
+
+
+_IDENT = re.compile(r'[^\W\d]\w*')
+
+
+class DependencyError(Exception):
+    """A move that would change which definition of a variable a line uses (args[0]: the variable)."""
 
 
 class KalamError(Exception):
@@ -504,9 +511,37 @@ class Session:
         bs = self.blocks()
         j = bs.index(b) + step
         if 0 <= j < len(bs):
-            bs[bs.index(b)], bs[j] = bs[j], b
-            self.cells.sort(key=lambda c: bs.index(c.block))   # stable: lines keep their order
-            self.evaluate_all()
+            self.move_block_to(b, j)
+
+    def _sources(self):
+        """(line id, name) -> id of the line whose definition of `name` that line uses (None: no definition before it)."""
+        defined = {c.name for c in self.cells if c.name}
+        last, out = {}, {}
+        for c in self.cells:
+            if c.is_text:      # values written in a text: {{f(2)}}
+                used = set(_IDENT.findall(' '.join(re.findall(r'\{\{(.*?)\}\}', c.text))))
+            else:
+                used = set(_IDENT.findall(c.norm or ''))
+            for u in used & defined:
+                out[c.id, u] = last.get(u)
+            if c.name:
+                last[c.name] = c.id
+        return out
+
+    def move_block_to(self, b, j):
+        """Move cell b to position j, only if every line still uses the same definitions (no variable changes value).
+        Otherwise nothing moves and DependencyError names the variable."""
+        bs = self.blocks()
+        before, order = self._sources(), list(self.cells)
+        bs.remove(b)
+        bs.insert(max(0, min(j, len(bs))), b)
+        self.cells.sort(key=lambda c: bs.index(c.block))   # stable: lines keep their order
+        after = self._sources()
+        bad = next((k for k in before if after.get(k) != before[k]), None)
+        if bad:
+            self.cells[:] = order
+            raise DependencyError(bad[1])
+        self.evaluate_all()
 
     def remove_cell(self, c):
         i = self.index(c)

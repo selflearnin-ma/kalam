@@ -1,4 +1,4 @@
-"""JSON bridge between the Kalam core and the web page (runs in Pyodide).
+"""JSON bridge between the SymNote core and the web page (runs in Pyodide).
 
 Every call returns JSON text; the page keeps no math state of its own.
 Scenes describe drawables with plain numbers, and functions as JavaScript
@@ -15,7 +15,7 @@ from sympy.printing.jscode import jscode
 
 from . import runtime
 from .commands import CATEGORIES, Registry
-from .engine import Session, dimension
+from .engine import DependencyError, Session, dimension
 from .export import figure_tkz, figure_window, to_latex, to_python
 from .i18n import STRINGS
 
@@ -172,7 +172,20 @@ def delete_cell(pos):
 
 
 def move_cell(pos, step):
-    session.move_block(_block(pos), int(step))
+    try:
+        session.move_block(_block(pos), int(step))
+    except DependencyError as e:
+        raise ValueError('dep:%s' % e.args[0])
+    return state()
+
+
+def move_cell_to(pos, target):
+    """Drag and drop: cell at position pos goes to position target. Refused (DependencyError) when a variable would
+    change value; the message is 'dep:<name>' for the page to translate."""
+    try:
+        session.move_block_to(_block(pos), int(target))
+    except DependencyError as e:
+        raise ValueError('dep:%s' % e.args[0])
     return state()
 
 
@@ -208,7 +221,7 @@ def klm_text(lang='fr'):
 def load_klm_text(text):
     data = json.loads(text)
     if data.get('format') != 'kalam':
-        raise ValueError('not a Kalam file')
+        raise ValueError('not a SymNote file')
     for d in data.get('commands', []):
         if d['name'] not in session.registry.commands or session.registry.commands[d['name']].code is not None:
             session.registry.add_user(d)

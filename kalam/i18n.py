@@ -27,6 +27,8 @@ STRINGS = {
     'delete': ('Supprimer', 'حذف', 'Delete'),
     'insert_above': ('Insérer au-dessus', 'إدراج فوق', 'Insert above'),
     'insert_below': ('Insérer en dessous', 'إدراج تحت', 'Insert below'),
+    'drag_cell': ('Glisser pour déplacer la cellule', 'اسحب لنقل الخلية', 'Drag to move the cell'),
+    'move_refused': ('Déplacement impossible : « %s » changerait de valeur', 'لا يمكن النقل: ستتغير قيمة « %s »', 'Cannot move here: "%s" would change value'),
     'move_up': ('Monter', 'إلى الأعلى', 'Move up'),
     'move_down': ('Descendre', 'إلى الأسفل', 'Move down'),
     'to_text': ('Convertir en texte', 'تحويل إلى نص', 'Convert to text'),

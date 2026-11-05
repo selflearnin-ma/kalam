@@ -1,6 +1,6 @@
-# Kalam — CAS notebook + 2D/3D graphics in pure Python
+# SymNote — CAS notebook + 2D/3D graphics in pure Python
 
-Kalam is a GeoGebra/Desmos-style mathematics app written only in Python:
+SymNote is a GeoGebra/Desmos-style mathematics app written only in Python:
 **SymPy** is the computer algebra system, **PySide6 (Qt)** the interface,
 **Matplotlib** renders formulas and the 3D view, **NumPy/contourpy** sample curves.
 
@@ -48,8 +48,8 @@ python tests/test_core.py            # core self-checks
 - The mathematics lives in the **behaviour of tiles** (e.g. `x` tiles + `1` tiles combine,
   a balance stays equal) rather than in a CAS. Good for discovery, not for symbolic computation.
 
-### What Kalam takes from each
-| Idea | From | In Kalam |
+### What SymNote takes from each
+| Idea | From | In SymNote |
 |---|---|---|
 | Objects defined by commands on other objects, recomputed when a free object moves | GeoGebra | each cell is a definition; editing/dragging re-evaluates the following cells |
 | Interface in several languages | GeoGebra | menus, messages and help in French, Arabic and English; commands keep one (English) name |
@@ -114,6 +114,8 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   at the number, or none); and **the content of every
   cell** (values in `$…$`, signs, arrows — changing an arrow moves the values up or down). Used by the LaTeX export.
 - Arrows ↗ ↘: buttons in the cell editor of a table, keys on the Clavier tab (`"↗"`), or type `"/"` and `"\\"`.
+- **Drag a cell by its number** (a grip appears on hover) to move it. A place where a variable would take another
+  value (a cell before the definition it uses, or between two definitions) is refused, with the variable named.
 - The Fichier menu can hide the cell numbers. The desktop apps draw their own title bar (minimize, maximize,
   close); drag the empty part of the bar to move the window.
 - The tools button of a figure (sliders icon) shows its zoom +, −, ⌂ and ⚙ buttons.
@@ -285,7 +287,7 @@ cd web/dist && python -m http.server           # try it: http://localhost:8000
 - **Any device**: put `web/dist/` on any static host (GitHub Pages, Netlify, a school server).
   First visit downloads about 20 MB, then it works **offline** (service worker).
 - **Install it like an app**: Android (Chrome menu → *Install app*), iOS/iPadOS (Safari → Share →
-  *Add to Home Screen*), Windows/Linux/macOS (Chrome or Edge → *Install Kalam*).
+  *Add to Home Screen*), Windows/Linux/macOS (Chrome or Edge → *Install SymNote*).
 - **App stores** (not done here): wrap `web/dist/` with Capacitor (`npx cap add android`, `npx cap add ios`);
   an iOS build needs a Mac with Xcode and an Apple developer account.
 - Notebooks are kept in the browser's storage; **Export** gives Python / LaTeX / tkz / .klm text to copy,
@@ -294,7 +296,7 @@ cd web/dist && python -m http.server           # try it: http://localhost:8000
 
 ## Native apps with Tauri: Windows, Linux, macOS, Android, iOS
 
-Architecture: **web core** (`web/app.html`) + **Pyodide** (SymPy and the Kalam Python core run
+Architecture: **web core** (`web/app.html`) + **Pyodide** (SymPy and the SymNote Python core run
 inside the app's webview) + **Tauri 2** (`src-tauri/`, a small Rust shell: window, native save dialog).
 Everything is bundled, so the apps work **offline** (`web/build.py --offline` copies MathJax and Plotly locally).
 
@@ -336,7 +338,7 @@ kalam/
 ```
 How evaluation works: each cell's text is normalized to SymPy source (aliases → English names,
 `2x` → `2*x`, `a = b` inside a command → `Eq(a, b)`, `x²` → `x**2`…), then evaluated with
-`sympy.parse_expr` in the environment left by the previous cells. Kalam keeps a snapshot of the
+`sympy.parse_expr` in the environment left by the previous cells. SymNote keeps a snapshot of the
 environment before each cell, so editing cell *n* only recomputes cells *n…end*.
 
 ## 6. Known limits

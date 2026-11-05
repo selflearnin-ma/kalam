@@ -60,7 +60,7 @@ self.addEventListener('fetch', e => {
 });
 '''
 MANIFEST = {
-    'name': 'Kalam', 'short_name': 'Kalam', 'start_url': '.', 'display': 'standalone',
+    'name': 'SymNote', 'short_name': 'SymNote', 'start_url': '.', 'display': 'standalone',
     'background_color': '#f3f5f8', 'theme_color': '#2f5bea', 'lang': 'fr',
     'icons': [{'src': 'icon.svg', 'sizes': 'any', 'type': 'image/svg+xml', 'purpose': 'any maskable'}],
 }
