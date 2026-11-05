@@ -10,10 +10,63 @@ from . import runtime
 
 USER_FILE = os.path.join(os.path.expanduser('~'), '.kalam', 'user_commands.json')
 
-CATEGORIES = ['geometry', 'transform', 'algebra', 'calculus', 'tables', 'matrix', 'graph2d', 'graph3d']
+CATEGORIES = ['calculus', 'arithmetic', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'graph3d',
+              'tables', 'matrix']
 
 # name, former French and Arabic names (old files only), category, argument hint
 BUILTINS = [
+    # calculus
+    ('Simplify', 'Simplifier', 'تبسيط', 'calculus', 'e'),
+    ('Hold', None, None, 'calculus', '2 + 3*4'),
+    ('Solve', 'Résoudre', 'حل', 'calculus', 'x^2 = 4, x'),
+    ('CSolve', 'RésoudreC', 'حل_عقدي', 'calculus', 'x^2 = -4, x'),
+    ('NSolve', 'RésoudreN', 'حل_عددي', 'calculus', 'e, x'),
+    ('Substitute', 'Substituer', 'تعويض', 'calculus', 'e, x, 2'),
+    ('Numeric', 'Valeur', 'قيمة_مقربة', 'calculus', 'e, 5'),
+    ('Sum', 'Somme', 'مجموع', 'calculus', 'k^2, k, 1, n'),
+    ('Sequence', 'Suite', 'متتالية', 'calculus', 'k^2, k, 1, 5'),
+    ('Series', 'DL', 'نشر_محدود', 'calculus', 'f, 0, 4'),
+    # arithmetic
+    ('GCD', 'PGCD', 'قاسم_مشترك', 'arithmetic', 'a, b'),
+    ('LCM', 'PPCM', 'مضاعف_مشترك', 'arithmetic', 'a, b'),
+    ('Divisors', 'Diviseurs', 'قواسم', 'arithmetic', 'n'),
+    ('IsPrime', 'EstPremier', 'أولي', 'arithmetic', 'n'),
+    ('PrimeFactors', None, None, 'arithmetic', '360'),
+    ('Quotient', None, None, 'arithmetic', '17, 5'),
+    ('Remainder', None, None, 'arithmetic', '17, 5'),
+    # functions
+    ('Domain', None, None, 'functions', 'f'),
+    ('Derivative', 'Dérivée', 'مشتقة', 'functions', 'f'),
+    ('Integral', 'Intégrale', 'تكامل', 'functions', 'f, a, b'),
+    ('Limit', 'Limite', 'نهاية', 'functions', 'f, oo'),
+    ('Tangent', 'Tangente', 'مماس', 'functions', 'f, a'),
+    ('Graphic', 'Graphique', 'رسم', 'functions', ''),
+    ('Draw', 'Tracer', 'ارسم', 'functions', 'f, A, c'),
+    ('Plot', 'Courbe', 'منحنى', 'functions', 'f, a, b'),
+    ('ParametricCurve', 'CourbeParamétrée', 'منحنى_وسيطي', 'functions', 'cos(t), sin(t), t, 0, 2pi'),
+    ('Slider', 'Curseur', 'منزلق', 'functions', '-5, 5, 0.1'),
+    # polynomials
+    ('Expand', 'Développer', 'نشر', 'polynomials', 'e'),
+    ('Factor', 'Factoriser', 'تعميل', 'polynomials', 'e'),
+    ('PartialFractions', 'ElémentsSimples', 'تفكيك', 'polynomials', 'e'),
+    ('Degree', None, None, 'polynomials', 'x^3 - 2x'),
+    ('Coefficients', None, None, 'polynomials', '2x^2 - 3x + 1'),
+    ('Roots', None, None, 'polynomials', '(x - 1)^2 (x + 2)'),
+    ('Discriminant', None, None, 'polynomials', 'x^2 + x + 1'),
+    ('Divide', None, None, 'polynomials', 'x^3 - 1, x - 1'),
+    # trigonometry
+    ('TrigSimplify', None, None, 'trigonometry', 'sin(x)^2 + cos(x)^2'),
+    ('TrigExpand', None, None, 'trigonometry', 'cos(2x)'),
+    ('TrigLinearize', None, None, 'trigonometry', 'cos(x)^2'),
+    ('SolveIn', None, None, 'trigonometry', 'sin(x) = 1/2, x, 0, 2pi'),
+    ('Degrees', None, None, 'trigonometry', 'pi/3'),
+    ('Radians', None, None, 'trigonometry', '60'),
+    # transform
+    ('Reflect', 'Symétrie', 'تماثل', 'transform', 'o, d'),
+    ('Rotate', 'Rotation', 'دوران', 'transform', 'o, pi/2, O'),
+    ('Translate', 'Translation', 'إزاحة', 'transform', 'o, u'),
+    ('Dilate', 'Homothétie', 'تحاك', 'transform', 'o, k, O'),
+    # geometry
     ('Point', 'Point', 'نقطة', 'geometry', 'x, y'),
     ('Segment', 'Segment', 'قطعة', 'geometry', 'A, B'),
     ('Line', 'Droite', 'مستقيم', 'geometry', 'A, B'),
@@ -29,53 +82,25 @@ BUILTINS = [
     ('Distance', 'Distance', 'مسافة', 'geometry', 'A, B'),
     ('Length', 'Longueur', 'طول', 'geometry', 's'),
     ('Area', 'Aire', 'مساحة', 'geometry', 'P'),
-    ('Tangent', 'Tangente', 'مماس', 'geometry', 'f, a'),
     ('Vector', 'Vecteur', 'متجهة', 'geometry', 'A, B'),
-    ('Reflect', 'Symétrie', 'تماثل', 'transform', 'o, d'),
-    ('Rotate', 'Rotation', 'دوران', 'transform', 'o, pi/2, O'),
-    ('Translate', 'Translation', 'إزاحة', 'transform', 'o, u'),
-    ('Dilate', 'Homothétie', 'تحاك', 'transform', 'o, k, O'),
-    ('Simplify', 'Simplifier', 'تبسيط', 'algebra', 'e'),
-    ('Hold', None, None, 'algebra', '2 + 3*4'),
-    ('Expand', 'Développer', 'نشر', 'algebra', 'e'),
-    ('Factor', 'Factoriser', 'تعميل', 'algebra', 'e'),
-    ('Solve', 'Résoudre', 'حل', 'algebra', 'x^2 = 4, x'),
-    ('CSolve', 'RésoudreC', 'حل_عقدي', 'algebra', 'x^2 = -4, x'),
-    ('NSolve', 'RésoudreN', 'حل_عددي', 'algebra', 'e, x'),
-    ('Substitute', 'Substituer', 'تعويض', 'algebra', 'e, x, 2'),
-    ('Numeric', 'Valeur', 'قيمة_مقربة', 'algebra', 'e, 5'),
-    ('PartialFractions', 'ElémentsSimples', 'تفكيك', 'algebra', 'e'),
-    ('GCD', 'PGCD', 'قاسم_مشترك', 'algebra', 'a, b'),
-    ('LCM', 'PPCM', 'مضاعف_مشترك', 'algebra', 'a, b'),
-    ('Divisors', 'Diviseurs', 'قواسم', 'algebra', 'n'),
-    ('IsPrime', 'EstPremier', 'أولي', 'algebra', 'n'),
-    ('Derivative', 'Dérivée', 'مشتقة', 'calculus', 'f'),
-    ('Integral', 'Intégrale', 'تكامل', 'calculus', 'f, a, b'),
-    ('Domain', None, None, 'calculus', 'f'),
-    ('Limit', 'Limite', 'نهاية', 'calculus', 'f, oo'),
-    ('Series', 'DL', 'نشر_محدود', 'calculus', 'f, 0, 4'),
-    ('Sum', 'Somme', 'مجموع', 'calculus', 'k^2, k, 1, n'),
-    ('Sequence', 'Suite', 'متتالية', 'calculus', 'k^2, k, 1, 5'),
-    ('Matrix', 'Matrice', 'مصفوفة', 'matrix', '[[1, 2], [3, 4]]'),
-    ('Det', 'Déterminant', 'محددة', 'matrix', 'M'),
-    ('Inverse', 'Inverse', 'مقلوب', 'matrix', 'M'),
-    ('Transpose', 'Transposée', 'منقول', 'matrix', 'M'),
-    ('Eigenvalues', 'ValeursPropres', 'قيم_ذاتية', 'matrix', 'M'),
-    ('Table', 'Tableau', 'جدول', 'tables', '3, 2'),
-    ('Row', 'Ligne', 'سطر', 'tables', 'T, a, b, c'),
-    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'tables', 'x^2 - 4'),
-    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'tables', 'f'),
-    ('Graphic', 'Graphique', 'رسم', 'graph2d', ''),
+    # graph3d
     ('Graphic3D', None, None, 'graph3d', ''),
-    ('Draw', 'Tracer', 'ارسم', 'graph2d', 'f, A, c'),
-    ('Plot', 'Courbe', 'منحنى', 'graph2d', 'f, a, b'),
-    ('ParametricCurve', 'CourbeParamétrée', 'منحنى_وسيطي', 'graph2d', 'cos(t), sin(t), t, 0, 2pi'),
-    ('Slider', 'Curseur', 'منزلق', 'graph2d', '-5, 5, 0.1'),
     ('Plot3D', 'Graphe3D', 'رسم_فضائي', 'graph3d', 'x^2 - y^2'),
     ('ParametricSurface', 'SurfaceParamétrée', 'سطح_وسيطي', 'graph3d',
      'cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2'),
     ('Sphere', 'Sphère', 'فلكة', 'graph3d', 'O, r'),
     ('Plane', 'Plan', 'مستوى', 'graph3d', 'A, B, C'),
+    # tables
+    ('Table', 'Tableau', 'جدول', 'tables', '3, 2'),
+    ('Row', 'Ligne', 'سطر', 'tables', 'T, a, b, c'),
+    ('SignTable', 'TableauSignes', 'جدول_الإشارة', 'tables', 'x^2 - 4'),
+    ('VariationTable', 'TableauVariations', 'جدول_التغيرات', 'tables', 'f'),
+    # matrix
+    ('Matrix', 'Matrice', 'مصفوفة', 'matrix', '[[1, 2], [3, 4]]'),
+    ('Det', 'Déterminant', 'محددة', 'matrix', 'M'),
+    ('Inverse', 'Inverse', 'مقلوب', 'matrix', 'M'),
+    ('Transpose', 'Transposée', 'منقول', 'matrix', 'M'),
+    ('Eigenvalues', 'ValeursPropres', 'قيم_ذاتية', 'matrix', 'M'),
 ]
 class Command:
     def __init__(self, name, fr, ar, category, hint, func, code=None, palette=True):
@@ -116,7 +141,8 @@ class Registry:
                         print('Kalam: user command %s ignored: %s' % (d.get('name'), e))
 
     def add_user(self, d):
-        cmd = Command(d['name'], d.get('fr'), d.get('ar'), d.get('category', 'algebra'),
+        cat = d.get('category') if d.get('category') in CATEGORIES else 'calculus'    # groups of earlier versions
+        cmd = Command(d['name'], d.get('fr'), d.get('ar'), cat,
                       d.get('hint', ''), compile_user(d['code']), d['code'], d.get('palette', True))
         self.commands[cmd.name] = cmd
         return cmd

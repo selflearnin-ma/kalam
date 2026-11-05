@@ -83,6 +83,16 @@ def test_example_exercise():
     assert run('Domain(1/(x - 2))').cells[0].value == sp.Union(sp.Interval.open(-sp.oo, 2), sp.Interval.open(2, sp.oo))
 
 
+def test_arithmetic_polynomials_trigonometry():
+    s = run('PrimeFactors(360)', 'Quotient(17, 5)', 'Remainder(-17, 5)', 'Degree(x^3 - 2x)', 'Coefficients(2x^2 - 3x + 1)',
+            'Roots((x - 1)^2 (x + 2))', 'Discriminant(x^2 + x + 1)', 'Divide(x^3 + 2x + 5, x^2 + 1)', 'TrigLinearize(cos(x)^2)',
+            'SolveIn(sin(x) = 1/2, x, 0, 2pi)', 'Degrees(pi/3)', 'Radians(60)')
+    v = [c.value for c in s.cells]
+    assert s.cells[0].latex == r'2^{3} \cdot 3^{2} \cdot 5' and v[1:4] == [3, 3, 3] and v[4] == [2, -3, 1]
+    assert v[5] == {1: 2, -2: 1} and v[6] == -3 and v[7] == [x, x + 5] and v[8] == sp.cos(2 * x) / 2 + sp.Rational(1, 2)
+    assert v[9] == sp.FiniteSet(sp.pi / 6, 5 * sp.pi / 6) and v[10] == 60 and v[11] == sp.pi / 3
+
+
 def test_drawables():
     s = run('y = 2x + 1', 'x^2 + y^2 < 4', 'z = x y', 'S = Sphere((0,0,0), 1)', 'c = Circle((0,0), 2)', '3 + 4')
     assert [dimension(c.value) for c in s.cells] == [2, 2, 3, 3, 2, None]

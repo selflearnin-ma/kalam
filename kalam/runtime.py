@@ -932,3 +932,88 @@ def Row(table, *cells):
 
 
 TABLES = (TableObj,)
+
+
+# ---------------------------------------------------------------- arithmetic
+def PrimeFactors(n):
+    """PrimeFactors(360) = 2^3 · 3^2 · 5 (the decomposition into prime factors, not computed back)."""
+    f = sp.factorint(sp.Integer(n))
+    return sp.Mul(*[sp.Pow(p, k, evaluate=False) if k > 1 else sp.Integer(p) for p, k in sorted(f.items())], evaluate=False)
+
+
+def Quotient(a, b):
+    """Quotient(17, 5) = 3: the quotient of the Euclidean division (17 = 5·3 + 2)."""
+    return sp.floor(sp.Integer(a) / sp.Integer(b))
+
+
+def Remainder(a, b):
+    """Remainder(17, 5) = 2: the remainder of the Euclidean division, 0 <= r < |b|."""
+    return sp.Mod(sp.Integer(a), abs(sp.Integer(b)))
+
+
+# ---------------------------------------------------------------- polynomials
+def _poly_var(p):
+    return _var(p) if p.free_symbols else x
+
+
+def Degree(p):
+    """Degree(x^3 - 2x) = 3."""
+    p = sp.sympify(p)
+    return sp.degree(p, _poly_var(p))
+
+
+def Coefficients(p):
+    """Coefficients(2x^2 - 3x + 1) = [2, -3, 1], from the highest degree."""
+    p = sp.sympify(p)
+    return sp.Poly(p, _poly_var(p)).all_coeffs()
+
+
+def Roots(p):
+    """Roots((x - 1)^2 (x + 2)) = {-2: 1, 1: 2}: each root with its multiplicity."""
+    p = sp.sympify(p.lhs - p.rhs if isinstance(p, sp.Eq) else p)
+    return sp.roots(sp.Poly(p, _poly_var(p)))
+
+
+def Discriminant(p):
+    """Discriminant(a x^2 + b x + c) = b^2 - 4ac."""
+    p = sp.sympify(p)
+    return sp.discriminant(p, _poly_var(p))
+
+
+def Divide(a, b):
+    """Divide(A, B) = [Q, R] with A = B·Q + R and deg R < deg B (Euclidean division of polynomials)."""
+    a, b = sp.sympify(a), sp.sympify(b)
+    q, r = sp.div(a, b, _poly_var(a))
+    return [q, r]
+
+
+# ---------------------------------------------------------------- trigonometry
+def TrigSimplify(e):
+    """TrigSimplify(sin(x)^2 + cos(x)^2) = 1."""
+    return sp.trigsimp(e)
+
+
+def TrigExpand(e):
+    """TrigExpand(cos(2x)) = 2cos(x)^2 - 1 (formulas of sums and multiple angles)."""
+    return sp.expand_trig(e)
+
+
+def TrigLinearize(e):
+    """TrigLinearize(cos(x)^2) = cos(2x)/2 + 1/2: products and powers into sums."""
+    from sympy.simplify.fu import TR8
+    return sp.expand(TR8(sp.expand(e)))
+
+
+def SolveIn(eq, var, a, b):
+    """SolveIn(sin(x) = 1/2, x, 0, 2pi): the solutions in [a, b]."""
+    return sp.solveset(sp.sympify(eq), var, sp.Interval(a, b))
+
+
+def Degrees(r):
+    """Degrees(pi/3) = 60: radians to degrees."""
+    return sp.nsimplify(r * 180 / sp.pi)
+
+
+def Radians(d):
+    """Radians(60) = pi/3: degrees to radians."""
+    return sp.nsimplify(d * sp.pi / 180)

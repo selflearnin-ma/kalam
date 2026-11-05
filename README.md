@@ -150,104 +150,132 @@ for a decimal approximation. Irrational numbers also show `≈`.
 
 Commands have one name, the same in every interface language (French, Arabic and English menus).
 Notebooks written with the French or Arabic command names of earlier versions are converted when opened.
-
-**Geometry**
-
-| Command | Arguments |
-|---|---|
-| Point | `x, y` |
-| Segment | `A, B` |
-| Line | `A, B` |
-| Ray | `A, B` |
-| Circle | `O, r` |
-| Polygon | `A, B, C` |
-| Midpoint | `A, B` |
-| Intersect | `a, b` |
-| Perpendicular | `A, d` |
-| Parallel | `A, d` |
-| PerpendicularBisector | `A, B` |
-| AngleBisector | `A, B, C` |
-| Distance | `A, B` |
-| Length | `s` |
-| Area | `P` |
-| Tangent | `f, a` |
-| Vector | `A, B` |
-
-**Transformations**
-
-| Command | Arguments |
-|---|---|
-| Reflect | `o, d` |
-| Rotate | `o, pi/2, O` |
-| Translate | `o, u` |
-| Dilate | `o, k, O` |
-
-**Algebra**
-
-| Command | Arguments |
-|---|---|
-| Simplify | `e` |
-| Expand | `e` |
-| Factor | `e` |
-| Solve | `x^2 = 4, x` |
-| CSolve | `x^2 = -4, x` |
-| NSolve | `e, x` |
-| Substitute | `e, x, 2` |
-| Numeric | `e, 5` |
-| PartialFractions | `e` |
-| GCD | `a, b` |
-| LCM | `a, b` |
-| Divisors | `n` |
-| IsPrime | `n` |
+The palette shows them in this order: Keyboard, then the groups below.
 
 **Calculus**
 
-| Command | Arguments |
+| Command | Example |
 |---|---|
-| Derivative | `f` |
-| Integral | `f, a, b` |
-| Limit | `f, oo` |
-| Series | `f, 0, 4` |
-| Sum | `k^2, k, 1, n` |
-| Sequence | `k^2, k, 1, 5` |
+| Simplify | `Simplify(e)` |
+| Hold | `Hold(2 + 3*4)` |
+| Solve | `Solve(x^2 = 4, x)` |
+| CSolve | `CSolve(x^2 = -4, x)` |
+| NSolve | `NSolve(e, x)` |
+| Substitute | `Substitute(e, x, 2)` |
+| Numeric | `Numeric(e, 5)` |
+| Sum | `Sum(k^2, k, 1, n)` |
+| Sequence | `Sequence(k^2, k, 1, 5)` |
+| Series | `Series(f, 0, 4)` |
 
-**Tables**
+**Arithmetic**
 
-| Command | Arguments |
+| Command | Example |
 |---|---|
-| Table | `3, 2` |
-| Row | `T, a, b, c` |
-| SignTable | `x^2 - 4` |
-| VariationTable | `f` |
+| GCD | `GCD(a, b)` |
+| LCM | `LCM(a, b)` |
+| Divisors | `Divisors(n)` |
+| IsPrime | `IsPrime(n)` |
+| PrimeFactors | `PrimeFactors(360)` |
+| Quotient | `Quotient(17, 5)` |
+| Remainder | `Remainder(17, 5)` |
 
-**Matrices**
+**Functions**
 
-| Command | Arguments |
+| Command | Example |
 |---|---|
-| Matrix | `[[1, 2], [3, 4]]` |
-| Det | `M` |
-| Inverse | `M` |
-| Transpose | `M` |
-| Eigenvalues | `M` |
+| Domain | `Domain(f)` |
+| Derivative | `Derivative(f)` |
+| Integral | `Integral(f, a, b)` |
+| Limit | `Limit(f, oo)` |
+| Tangent | `Tangent(f, a)` |
+| Graphic | `Graphic()` |
+| Draw | `Draw(f, A, c)` |
+| Plot | `Plot(f, a, b)` |
+| ParametricCurve | `ParametricCurve(cos(t), sin(t), t, 0, 2pi)` |
+| Slider | `Slider(-5, 5, 0.1)` |
 
-**Graphs**
+**Polynomials**
 
-| Command | Arguments |
+| Command | Example |
 |---|---|
-| Graphic | `` |
-| Draw | `f, A, c` |
-| Plot | `f, a, b` |
-| ParametricCurve | `cos(t), sin(t), t, 0, 2pi` |
-| Slider | `-5, 5, 0.1` |
+| Expand | `Expand(e)` |
+| Factor | `Factor(e)` |
+| PartialFractions | `PartialFractions(e)` |
+| Degree | `Degree(x^3 - 2x)` |
+| Coefficients | `Coefficients(2x^2 - 3x + 1)` |
+| Roots | `Roots((x - 1)^2 (x + 2))` |
+| Discriminant | `Discriminant(x^2 + x + 1)` |
+| Divide | `Divide(x^3 - 1, x - 1)` |
+
+**Trigonometry**
+
+| Command | Example |
+|---|---|
+| TrigSimplify | `TrigSimplify(sin(x)^2 + cos(x)^2)` |
+| TrigExpand | `TrigExpand(cos(2x))` |
+| TrigLinearize | `TrigLinearize(cos(x)^2)` |
+| SolveIn | `SolveIn(sin(x) = 1/2, x, 0, 2pi)` |
+| Degrees | `Degrees(pi/3)` |
+| Radians | `Radians(60)` |
+
+**Transformations**
+
+| Command | Example |
+|---|---|
+| Reflect | `Reflect(o, d)` |
+| Rotate | `Rotate(o, pi/2, O)` |
+| Translate | `Translate(o, u)` |
+| Dilate | `Dilate(o, k, O)` |
+
+**Geometry**
+
+| Command | Example |
+|---|---|
+| Point | `Point(x, y)` |
+| Segment | `Segment(A, B)` |
+| Line | `Line(A, B)` |
+| Ray | `Ray(A, B)` |
+| Circle | `Circle(O, r)` |
+| Polygon | `Polygon(A, B, C)` |
+| Midpoint | `Midpoint(A, B)` |
+| Intersect | `Intersect(a, b)` |
+| Perpendicular | `Perpendicular(A, d)` |
+| Parallel | `Parallel(A, d)` |
+| PerpendicularBisector | `PerpendicularBisector(A, B)` |
+| AngleBisector | `AngleBisector(A, B, C)` |
+| Distance | `Distance(A, B)` |
+| Length | `Length(s)` |
+| Area | `Area(P)` |
+| Vector | `Vector(A, B)` |
 
 **Space**
 
-| Command | Arguments |
+| Command | Example |
 |---|---|
-| Plot3D | `x^2 - y^2` |
-| ParametricSurface | `cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2` |
-| Sphere | `O, r` |
-| Plane | `A, B, C` |
+| Graphic3D | `Graphic3D()` |
+| Plot3D | `Plot3D(x^2 - y^2)` |
+| ParametricSurface | `ParametricSurface(cos(u)cos(v), sin(u)cos(v), sin(v), u, 0, 2pi, v, -pi/2, pi/2)` |
+| Sphere | `Sphere(O, r)` |
+| Plane | `Plane(A, B, C)` |
+
+**Tables**
+
+| Command | Example |
+|---|---|
+| Table | `Table(3, 2)` |
+| Row | `Row(T, a, b, c)` |
+| SignTable | `SignTable(x^2 - 4)` |
+| VariationTable | `VariationTable(f)` |
+
+**Matrices**
+
+| Command | Example |
+|---|---|
+| Matrix | `Matrix([[1, 2], [3, 4]])` |
+| Det | `Det(M)` |
+| Inverse | `Inverse(M)` |
+| Transpose | `Transpose(M)` |
+| Eigenvalues | `Eigenvalues(M)` |
 
 ### Your own commands
 **Commands → Commands editor**: write a Python function `run(*args)` with SymPy, give it a name,
