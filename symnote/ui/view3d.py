@@ -52,7 +52,7 @@ class View3D(FigureCanvasQTAgg):
                 try:
                     self.draw_obj(c.value, cell_color(self.session, c), c.name)
                 except Exception as e:
-                    print('Kalam 3D:', c.text, e)
+                    print('SymNote 3D:', c.text, e)
         self.draw_idle()
 
     def grid(self, n=50):

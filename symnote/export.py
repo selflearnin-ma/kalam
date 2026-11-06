@@ -1,4 +1,4 @@
-"""Save/load .klm files and export to Python, LaTeX (notebook) and tkz figures."""
+"""Save/load .syn files and export to Python, LaTeX (notebook) and tkz figures."""
 import inspect
 import io
 import json
@@ -15,10 +15,10 @@ from .engine import GLOBALS_BASE, Session, dimension, fmt
 
 
 
-# ---------------------------------------------------------------- .klm
-def save_klm(session, path, view=None, lang='fr'):
+# ---------------------------------------------------------------- .syn
+def save_syn(session, path, view=None, lang='fr'):
     data = {
-        'format': 'kalam', 'version': 2, 'lang': lang, 'view2d': view or {},
+        'format': 'symnote', 'version': 2, 'lang': lang, 'view2d': view or {},
         'cells': session.cells_json(),
         'commands': [c.to_json() for c in session.registry.user_commands()],
     }
@@ -26,10 +26,10 @@ def save_klm(session, path, view=None, lang='fr'):
         json.dump(data, f, ensure_ascii=False, indent=1)
 
 
-def load_klm(path, registry):
+def load_syn(path, registry):
     with open(path, encoding='utf-8') as f:
         data = json.load(f)
-    if data.get('format') != 'kalam':
+    if data.get('format') not in ('symnote', 'kal' + 'am'):    # files saved before the rename open too
         raise ValueError('not a SymNote file')
     for d in data.get('commands', []):
         if d['name'] not in registry.commands:

@@ -1,12 +1,12 @@
 [package]
-name = "kalam"
+name = "symnote"
 version = "0.1.0"
 description = "SymNote: CAS notebook (SymPy via Pyodide) with 2D/3D graphics"
 edition = "2021"
 
 [lib]
 # lib name differs from the bin name (Windows/Cargo quirk); mobile needs staticlib/cdylib
-name = "kalam_lib"
+name = "symnote_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

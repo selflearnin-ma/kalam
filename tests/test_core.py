@@ -8,9 +8,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import sympy as sp  # noqa: E402
 
-from kalam.engine import Cell, Session, dimension  # noqa: E402
-from kalam import runtime  # noqa: E402
-from kalam.export import figure_tkz, load_klm, save_klm, to_latex, to_python  # noqa: E402
+from symnote.engine import Cell, Session, dimension  # noqa: E402
+from symnote import runtime  # noqa: E402
+from symnote.export import figure_tkz, load_syn, save_syn, to_latex, to_python  # noqa: E402
 
 x, y = sp.symbols('x y')
 
@@ -65,11 +65,11 @@ def test_old_names_are_updated():
 
 
 def test_example_exercise():
-    # examples/exercice3_fr.klm: Domain, Factor, Solve, VariationTable, a graphic; no cell in error
-    from kalam import web
+    # examples/exercice3_fr.syn: Domain, Factor, Solve, VariationTable, a graphic; no cell in error
+    from symnote import web
     import json
-    path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'exercice3_fr.klm')
-    web.load_klm_text(open(path, encoding='utf-8').read())
+    path = os.path.join(os.path.dirname(__file__), '..', 'examples', 'exercice3_fr.syn')
+    web.load_syn_text(open(path, encoding='utf-8').read())
     lines = json.loads(web.state())['lines']
     assert not [ln['error'] for ln in lines if ln.get('error')]
     assert any('D_f = \\mathbb{R}' in (ln.get('parts') or [(0, '')])[0][1] for ln in lines)
@@ -119,7 +119,7 @@ def test_geometry_in_space_and_sets():
 
 def test_represent_sets():
     import json
-    from kalam import web
+    from symnote import web
     web.new()
     web.set_cell(0, 'Represent(x^2 + y^2 = 4)\nRepresent(x > 0, y > 0, x + y < 2)\nRepresent3D(x^2 + y^2 + z^2 - 2x = 3)\n'
                     'Represent3D(x + y + z = 1)\nRepresent3D(x^2 + y^2 = 1)\nDraw3D(Sphere((0,0,0), 1))\nRepresent(x + z > 0)')
@@ -166,9 +166,9 @@ def test_exports():
                            env=dict(os.environ, PYTHONIOENCODING='utf-8'))   # Windows consoles are cp1252
         assert r.returncode == 0, r.stderr
         assert 'Line2D(Point2D(1, 1), Point2D(2, 3))' in r.stdout          # tangent at k = 1: y = 2x - 1
-        klm = os.path.join(d, 'a.klm')
-        save_klm(s, klm)
-        s2, _, _ = load_klm(klm, s.registry)
+        syn = os.path.join(d, 'a.syn')
+        save_syn(s, syn)
+        s2, _, _ = load_syn(syn, s.registry)
         assert [c.latex for c in s2.cells] == [c.latex for c in s.cells]
     tex = to_latex(s)
     assert '\\begin{document}' in tex and '\\left\\{-2, 2\\right\\}' in tex   # Solve(f(x) = 4, x)
@@ -217,7 +217,7 @@ def test_figures():
     h = h[:3] + h[5:]
     assert [c.error for c in h[:4]] == [None] * 4 and h[3].shows_figure and len(h[3].value.items) == 4
     assert 'a 3D graphic draws 3D objects' in h[4].error and 'a 2D graphic draws 2D objects' in h[6].error
-    from kalam.export import figure_window
+    from symnote.export import figure_window
     assert figure_window(s.cells[3].value.items + s.cells[5].value.items) == [-6, 6, -5, 11]    # A, c and the parabola (|y| <= 10)
 
 
@@ -236,7 +236,7 @@ def test_tables():
 
 def test_table_by_rows():
     import json
-    from kalam import web
+    from symnote import web
     web.new()
     web.set_cell(0, 'f(x) = x^2\nT = Table(3, 2)\nT.Row(x, 1, 2)\nT.Row("$f(x)$", f(1), "+")\nT.Row(1, 2, 3, 4)\nT\nV = Table(2)\nV.Row("-∞", 1)\nV')
     lines = json.loads(web.state())['lines']
@@ -279,7 +279,7 @@ def test_cells_of_several_lines():
     assert s.block_lines(b)[1].value == sp.FiniteSet(-2, 2)
     s.move_block(s.blocks()[1], -1)
     assert s.block_lines(s.blocks()[0])[0].text == '$1'
-    # old .klm: one line per cell, text cells become "..." lines
+    # old .syn: one line per cell, text cells become "..." lines
     s.load_cells([dict(kind='text', text='Bonjour "tous"\n\nsuite'), dict(kind='math', text='g(x) = 2x')])
     assert [c.text for c in s.cells] == ['"Bonjour \\"tous\\""', '"suite"', 'g(x) = 2x']
     assert s.cells[0].parts == [(False, 'Bonjour "tous"')] and len(s.blocks()) == 2
@@ -291,7 +291,7 @@ def test_cells_of_several_lines():
 
 def test_move_keeps_values():
     # a cell moves only where every variable keeps its definition (drag and drop, ↑ ↓)
-    from kalam.engine import DependencyError
+    from symnote.engine import DependencyError
     s = Session()
     for t in ('a = 2', 'f(x) = a x^2', 'G = Graphic()', 'G.Plot(f)', 'G', '"{{f(1)}}"', 'a = 5\nb = a + 1'):
         s.insert_block(len(s.blocks()), t)
@@ -309,7 +309,7 @@ def test_move_keeps_values():
 
 
 def test_sequences():
-    from kalam import web
+    from symnote import web
     s = Session()
     ev = s.evaluate_expression
     assert ev('RecSequence(u/2 + 1, 0, 3)') == [0, 1, sp.Rational(3, 2), sp.Rational(7, 4)]
@@ -328,7 +328,7 @@ def test_web_bridge():
     import json
     import zipfile
     import io
-    from kalam import web
+    from symnote import web
     web.new()
     web.set_cell(0, 'f(x) = x^2\nA = (1, 2)\nD = x^2 + y^2 < 4\nG = Graphic()\nG.Plot(f)\nG.Draw(A)\nG.Represent(D)\nG\nPlot3D(x y)')
     lines = json.loads(web.state())['lines']
@@ -341,16 +341,16 @@ def test_web_bridge():
     web.move_point(1, 3, 4)
     assert json.loads(web.state())['lines'][1]['text'] == 'A = (3, 4)'
     web.insert_cell(1, '"texte"')
-    assert json.loads(web.klm_text())['cells'][-1]['text'] == '"texte"'
+    assert json.loads(web.syn_text())['cells'][-1]['text'] == '"texte"'
     # figure options: kept in the file, when the line is edited unchanged, and used by the tkz export
     web.set_style(7, json.dumps({'grid': False, 'objs': {'f': {'color': '#ff0000', 'dash': True}, 'D': {'hide': True}}}))
-    web.load_klm_text(web.klm_text())
+    web.load_syn_text(web.syn_text())
     web.set_cell(0, 'f(x) = x^2\nA = (3, 5)\nD = x^2 + y^2 < 4\nG = Graphic()\nG.Plot(f)\nG.Draw(A)\nG.Represent(D)\nG\nPlot3D(x y)')
     assert json.loads(web.state())['lines'][7]['figure']['style']['objs']['f'] == {'color': '#ff0000', 'dash': True}
     fig = web.export_text('fig', 'fr')
     assert 'tkzGrid' not in fig and 'red,255;green,0;blue,0},dashed]' in fig
     names = zipfile.ZipFile(io.BytesIO(web.export_zip('k'))).namelist()
-    assert sorted(names) == ['k.klm', 'k.py', 'k.tex', 'k_figures.tex']
+    assert sorted(names) == ['k.py', 'k.syn', 'k.tex', 'k_figures.tex']
 
 
 if __name__ == '__main__':

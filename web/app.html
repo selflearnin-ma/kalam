@@ -252,7 +252,7 @@ dialog::backdrop { background: rgb(10 14 22 / 0.45); }
     <div class="brand"><b>SymNote</b></div>
     <button class="tb" id="bFile" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="lt" data-t="file"></span></button>
     <button class="tb" id="bCmd"><svg viewBox="0 0 24 24"><path d="M15 4h-2a3 3 0 0 0-3 3v11a3 3 0 0 1-3 3H6M7 11h8"/></svg><span class="lt" data-t="commands"></span></button>
-    <input type="file" id="fOpen" accept=".klm,application/json" multiple hidden>
+    <input type="file" id="fOpen" accept=".syn,.klm,application/json" multiple hidden>
     <div class="spacer" data-tauri-drag-region></div>
     <div id="doc" data-tauri-drag-region><span id="docName"></span><i id="docDirty" hidden></i></div>
     <div class="spacer" data-tauri-drag-region></div>
@@ -274,7 +274,7 @@ dialog::backdrop { background: rgb(10 14 22 / 0.45); }
 
 <dialog id="dExport"><div class="dlg">
   <div class="row"><h2 data-t="export"></h2><div class="spacer"></div><button class="btn" data-close data-t="close"></button></div>
-  <div class="seg" id="exKinds"><button data-k="py" aria-pressed="true">Python</button><button data-k="tex">LaTeX</button><button data-k="fig">tkz</button><button data-k="klm">.klm</button></div>
+  <div class="seg" id="exKinds"><button data-k="py" aria-pressed="true">Python</button><button data-k="tex">LaTeX</button><button data-k="fig">tkz</button><button data-k="syn">.syn</button></div>
   <textarea id="exText" readonly spellcheck="false"></textarea>
   <div class="row"><button class="btn" id="exCopy" data-t="copy"></button><button class="btn primary" id="exZip" data-t="download_zip"></button></div>
 </div></dialog>
@@ -336,10 +336,10 @@ const $ = s => document.querySelector(s);
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
                 set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 
-let W = null;                 // kalam.web module (Pyodide proxy)
+let W = null;                 // symnote.web module (Pyodide proxy)
 let S = { cells: [], blocks: [] };   // last state from Python (see setState)
 let CAT = null;               // commands + strings
-let lang = store.get('kalam.lang') || ((navigator.language || 'fr').slice(0, 2) in { ar: 1, en: 1 } ? navigator.language.slice(0, 2) : 'fr');
+let lang = store.get('symnote.lang') || ((navigator.language || 'fr').slice(0, 2) in { ar: 1, en: 1 } ? navigator.language.slice(0, 2) : 'fr');
 let editing = -1;
 
 // ------------------------------------------------------------------ helpers
@@ -372,7 +372,7 @@ function tex(src) {
 let saveT;
 function scheduleSave() {
   clearTimeout(saveT);
-  saveT = setTimeout(() => { store.set('kalam.cmds', W.user_commands_json()); saveSession(); }, 600);
+  saveT = setTimeout(() => { store.set('symnote.cmds', W.user_commands_json()); saveSession(); }, 600);
 }
 
 // ------------------------------------------------------------------ texts & language
@@ -384,7 +384,7 @@ function applyLang() {
   $('#ceArgs').placeholder = tr('ce_test_args');
   document.querySelectorAll('[data-tt]').forEach(el => { el.title = tr(el.dataset.tt); el.setAttribute('aria-label', el.title); });
   if (W) showDoc();
-  store.set('kalam.lang', lang);
+  store.set('symnote.lang', lang);
   if (CAT) { renderPalette(); renderNotebook(); }
 }
 
@@ -1252,12 +1252,12 @@ function confirmBox(msg, yes) {
 }
 document.addEventListener('click', e => { if (e.target.closest('[data-close]')) e.target.closest('dialog').close(); });
 // open notebooks (tabs): name, path in the desktop app (null: never saved), modified since the last save, and the
-// notebook itself (klm text) for the ones not shown. The engine holds only the shown one, `doc`.
+// notebook itself (syn text) for the ones not shown. The engine holds only the shown one, `doc`.
 let docs = [], doc = null;
-const blankDoc = () => ({ name: null, path: null, dirty: false, klm: null });
-const docLabel = d => (d.name || tr('untitled')).replace(/\.klm$/, '');
+const blankDoc = () => ({ name: null, path: null, dirty: false, syn: null });
+const docLabel = d => (d.name || tr('untitled')).replace(/\.(syn|klm)$/, '');
 function showDoc() {
-  $('#docName').textContent = docLabel(doc) + '.klm';
+  $('#docName').textContent = docLabel(doc) + '.syn';
   $('#docDirty').hidden = !doc.dirty; $('#docDirty').title = tr('modified');
   document.title = (doc.dirty ? '• ' : '') + docLabel(doc) + ' — SymNote';
   renderTabs(); saveSession();
@@ -1280,21 +1280,21 @@ function saveSession() {
   clearTimeout(sessT);
   sessT = setTimeout(() => {
     if (!doc || !W) return;
-    doc.klm = W.klm_text(lang);
-    store.set('kalam.session', JSON.stringify({ cur: docs.indexOf(doc), docs }));
+    doc.syn = W.syn_text(lang);
+    store.set('symnote.session', JSON.stringify({ cur: docs.indexOf(doc), docs }));
   }, 400);
 }
 function showEngine() { figViews.clear(); editing = -1; setState(W.state()); renderNotebook(); }
 function switchDoc(k) {
   if (docs[k] === doc) return;
-  doc.klm = W.klm_text(lang);
+  doc.syn = W.syn_text(lang);
   doc = docs[k];
-  try { W.load_klm_text(doc.klm || '{"cells": []}'); } catch (err) { toast(tr('error') + ': ' + pyErr(err)); }
+  try { W.load_syn_text(doc.syn || '{"cells": []}'); } catch (err) { toast(tr('error') + ': ' + pyErr(err)); }
   CAT = JSON.parse(W.catalog()); renderPalette(); showEngine(); showDoc();
 }
 function touched() { if (!doc.dirty) { doc.dirty = true; showDoc(); } }
 function newDoc() {
-  if (doc) doc.klm = W.klm_text(lang);
+  if (doc) doc.syn = W.syn_text(lang);
   doc = blankDoc(); docs.push(doc);
   call('new'); showEngine(); editing = 0; renderNotebook(); showDoc();
 }
@@ -1303,10 +1303,10 @@ function openText(text, name, path) {
   if (same) { switchDoc(docs.indexOf(same)); return; }
   const empty = doc && !doc.name && !doc.dirty && S.cells.length <= 1 && !(S.cells[0] && S.cells[0].text);
   try {
-    if (doc) doc.klm = W.klm_text(lang);
-    W.load_klm_text(text);
+    if (doc) doc.syn = W.syn_text(lang);
+    W.load_syn_text(text);
     if (!empty) { doc = blankDoc(); docs.push(doc); }          // a new tab, unless the current one is an empty notebook
-    Object.assign(doc, { name, path, dirty: false, klm: text });
+    Object.assign(doc, { name, path: /\.klm$/i.test(path || '') ? null : path, dirty: false, syn: text });   // an old .klm is saved again as .syn
     CAT = JSON.parse(W.catalog()); renderPalette(); showEngine(); showDoc(); toast(tr('opened').replace('%s', name));
   } catch (err) { toast(tr('error') + ': ' + pyErr(err)); }
 }
@@ -1331,7 +1331,7 @@ async function closeDoc(k) {
   docs.splice(k, 1);
   if (!docs.length) { doc = null; newDoc(); return; }
   if (wasShown) { doc = null; const n = Math.min(k, docs.length - 1); doc = docs[n];
-    try { W.load_klm_text(doc.klm || '{"cells": []}'); } catch (err) { toast(pyErr(err)); }
+    try { W.load_syn_text(doc.syn || '{"cells": []}'); } catch (err) { toast(pyErr(err)); }
     showEngine(); }
   showDoc();
 }
@@ -1348,7 +1348,7 @@ window.addEventListener('beforeunload', e => { if (docs.some(d => d.dirty) && !w
 async function openDoc() {
   const T = window.__TAURI__;
   if (T) {   // desktop/mobile app: native dialog, so Save can write back to the same file
-    try { const paths = await T.dialog.open({ multiple: true, filters: [{ name: 'SymNote', extensions: ['klm'] }] });
+    try { const paths = await T.dialog.open({ multiple: true, filters: [{ name: 'SymNote', extensions: ['syn', 'klm'] }] });
       for (const path of [].concat(paths || [])) openText(await T.fs.readTextFile(path), path.split(/[\\/]/).pop(), path); }
     catch (e) { toast(tr('error') + ': ' + (e.message || e)); }
     return;
@@ -1357,12 +1357,12 @@ async function openDoc() {
 }
 $('#fOpen').onchange = async e => { for (const f of e.target.files) openText(await f.text(), f.name, null); e.target.value = ''; };
 async function saveDoc(as) {
-  const text = W.klm_text(lang), T = window.__TAURI__;
-  const name = (doc.name || tr('untitled')).replace(/\.klm$/, '') + '.klm';
+  const text = W.syn_text(lang), T = window.__TAURI__;
+  const name = (doc.name || tr('untitled')).replace(/\.(syn|klm)$/, '') + '.syn';
   if (T) {
     try {
       let path = !as && doc.path;
-      if (!path) path = await T.dialog.save({ defaultPath: doc.path || name, filters: [{ name: 'SymNote', extensions: ['klm'] }] });
+      if (!path) path = await T.dialog.save({ defaultPath: doc.path || name, filters: [{ name: 'SymNote', extensions: ['syn'] }] });
       if (!path) return false;
       await T.fs.writeTextFile(path, text);
       Object.assign(doc, { path, name: path.split(/[\\/]/).pop(), dirty: false }); showDoc(); toast(tr('saved').replace('%s', doc.name));
@@ -1386,7 +1386,7 @@ $('#bFile').onclick = e => {
   popMenu(e.currentTarget, [['new', askNew, MOD + 'N', ICON.new], ['open', openDoc, MOD + 'O', ICON.open], '-',
     ['save', () => saveDoc(false), MOD + 'S', ICON.save], ['save_as', () => saveDoc(true), MOD + '⇧S', ICON.saveas], '-',
     ['export_dots', openExport, MOD + 'E', ICON.export], ['close_doc', () => closeDoc(docs.indexOf(doc)), MOD + 'W', ICON.close], '-',
-    ['example', () => openText(JSON.stringify(DEMO[lang] || DEMO.fr), 'exemple.klm', null), '', ICON.open], '-',
+    ['example', () => openText(JSON.stringify(DEMO[lang] || DEMO.fr), 'exemple.syn', null), '', ICON.open], '-',
     [document.body.classList.contains('nonum') ? 'show_nums' : 'hide_nums', () => showNums(document.body.classList.contains('nonum')), '', ICON.nums]], true);
 };
 // desktop app: our own minimize / maximize / close (the window has no system title bar)
@@ -1398,12 +1398,12 @@ if (window.__TAURI__ && window.__TAURI__.window && !/Android|iPhone|iPad/.test(n
   // closing the window (our button, Alt+F4, the dock...): modified notebooks first
   w.onCloseRequested(async ev => {
     ev.preventDefault();
-    if (await confirmQuit()) { doc.klm = W.klm_text(lang); store.set('kalam.session', JSON.stringify({ cur: docs.indexOf(doc), docs })); w.destroy(); }
+    if (await confirmQuit()) { doc.syn = W.syn_text(lang); store.set('symnote.session', JSON.stringify({ cur: docs.indexOf(doc), docs })); w.destroy(); }
   });
 }
 // cell numbers can be hidden (remembered in this browser / app)
-function showNums(on) { document.body.classList.toggle('nonum', !on); store.set('kalam.nums', on ? '1' : '0'); }
-showNums(store.get('kalam.nums') !== '0');
+function showNums(on) { document.body.classList.toggle('nonum', !on); store.set('symnote.nums', on ? '1' : '0'); }
+showNums(store.get('symnote.nums') !== '0');
 document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey || document.querySelector('dialog[open]:not(#dFig)')) return;
   const k = e.key.toLowerCase(), act = { n: askNew, o: openDoc, s: () => saveDoc(e.shiftKey), e: openExport, w: () => closeDoc(docs.indexOf(doc)) }[k];
@@ -1434,7 +1434,7 @@ async function saveFile(name, bytes, type = 'application/zip') {
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return true;
 }
-$('#exZip').onclick = () => { const b = W.export_zip('kalam', lang).toJs(); saveFile('kalam.zip', b); };
+$('#exZip').onclick = () => { const b = W.export_zip('symnote', lang).toJs(); saveFile('symnote.zip', b); };
 
 // ------------------------------------------------------------------ commands editor
 let ceSel = null;
@@ -1483,18 +1483,18 @@ $('#bLang').onclick = e => {
 // Nothing open (or only an empty, unsaved notebook): start with an empty notebook.
 async function restoreSession() {
   let ses = null;
-  try { ses = JSON.parse(store.get('kalam.session') || 'null'); } catch (e) {}
+  try { ses = JSON.parse(store.get('symnote.session') || 'null'); } catch (e) {}
   if (!ses) {        // the single autosaved notebook of earlier versions
-    const nb = store.get('kalam.nb'); let d0 = {};
-    try { d0 = JSON.parse(store.get('kalam.doc') || '{}'); } catch (e) {}
-    if (nb && d0.name) ses = { cur: 0, docs: [{ name: d0.name, path: d0.path || null, dirty: false, klm: nb }] };
+    const nb = store.get('symnote.nb'); let d0 = {};
+    try { d0 = JSON.parse(store.get('symnote.doc') || '{}'); } catch (e) {}
+    if (nb && d0.name) ses = { cur: 0, docs: [{ name: d0.name, path: d0.path || null, dirty: false, syn: nb }] };
   }
-  docs = ((ses && ses.docs) || []).filter(d => d && d.klm && (d.name || d.dirty));
+  docs = ((ses && ses.docs) || []).filter(d => d && d.syn && (d.name || d.dirty));
   const T = window.__TAURI__;
-  for (const d of docs) if (T && d.path && !d.dirty) { try { d.klm = await T.fs.readTextFile(d.path); } catch (e) { /* moved: keep the copy */ } }
+  for (const d of docs) if (T && d.path && !d.dirty) { try { d.syn = await T.fs.readTextFile(d.path); } catch (e) { /* moved: keep the copy */ } }
   if (!docs.length) docs = [blankDoc()];
   doc = docs[Math.max(0, Math.min((ses && ses.cur) || 0, docs.length - 1))];
-  try { if (doc.klm) W.load_klm_text(doc.klm); else call('new'); } catch (e) { call('new'); }
+  try { if (doc.syn) W.load_syn_text(doc.syn); else call('new'); } catch (e) { call('new'); }
 }
 async function boot() {
   applyLang();
@@ -1508,11 +1508,11 @@ async function boot() {
     const py = await loadPyodide({ indexURL: PY, stdLibURL: stdlib });
     try { await mj; document.head.appendChild(MathJax.svgStylesheet()); } catch (e) { /* formulas fall back to TeX source */ }
     const sp = '/lib/python3.12/site-packages';
-    for (const [f, dir] of [['mpmath-1.3.0-py3-none-any.whl', sp], ['sympy-1.14.0-py3-none-any.whl', sp], ['kalam-core.zip', '/home/pyodide']]) {
+    for (const [f, dir] of [['mpmath-1.3.0-py3-none-any.whl', sp], ['sympy-1.14.0-py3-none-any.whl', sp], ['symnote-core.zip', '/home/pyodide']]) {
       py.unpackArchive(await bytes(f), 'zip', { extractDir: dir });
     }
-    W = py.pyimport('kalam.web');
-    W.load_user_commands(store.get('kalam.cmds') || '[]');
+    W = py.pyimport('symnote.web');
+    W.load_user_commands(store.get('symnote.cmds') || '[]');
     CAT = JSON.parse(W.catalog());
     await restoreSession();
     applyLang(); showEngine(); showDoc();

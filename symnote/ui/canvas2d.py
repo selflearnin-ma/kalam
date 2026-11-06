@@ -118,7 +118,7 @@ class Canvas2D(QWidget):
             try:
                 self.draw(p, c, c.value, col, c.name, points)
             except Exception as e:       # one bad object must not blank the view
-                print('Kalam draw:', c.text, e)
+                print('SymNote draw:', c.text, e)
         for pt, col, label, free in points:     # points on top
             r = 5.5 if free else 4.5
             p.setPen(QPen(QColor('white'), 2))

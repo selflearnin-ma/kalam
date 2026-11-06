@@ -10,8 +10,8 @@ Interface and commands work in **French, Arabic (right-to-left) and English**.
 
 ```
 pip install -r requirements.txt
-python -m kalam                      # empty notebook
-python -m kalam examples/demo_fr.klm # French demo
+python -m symnote                      # empty notebook
+python -m symnote examples/demo_fr.syn # French demo
 python tests/test_core.py            # core self-checks
 ```
 
@@ -97,7 +97,7 @@ There is one kind of cell: **code**. A cell can hold several lines, and its outp
   tab, Close (Ctrl+W or × on the tab). Closing a modified notebook, or the app, asks to save it. At the next start the
   notebooks open last time come back (unsaved changes included); if none was open, an empty notebook.
 - **Fichier** menu: New (Ctrl+N), Open (Ctrl+O), Save (Ctrl+S), Save as (Ctrl+Shift+S), Export (Ctrl+E);
-  the **Commandes** button opens the commands editor. In the apps Save writes back to the opened file; in a browser it downloads the `.klm`.
+  the **Commandes** button opens the commands editor. In the apps Save writes back to the opened file; in a browser it downloads the `.syn`.
 - Typing `(` `[` `{` `"` adds the closing one; typing the closing one steps over it; Backspace on an empty pair
   removes both.
 - **Clavier** tab: x, y, □², □^□, □/□, √□, ⁿ√□, |□|, π, e, ∞, ≤, sin, ln… inserted at the cursor, cursor left inside the box.
@@ -335,12 +335,12 @@ def run(f, a):
     d = sp.diff(e, v).subs(v, a)
     return sp.Eq(y, sp.expand(-(x - a) / d + e.subs(v, a)))
 ```
-User commands are stored in `~/.kalam/user_commands.json` and also inside each `.klm` file.
+User commands are stored in `~/.symnote/user_commands.json` and also inside each `.syn` file.
 
 ---
 
 ## 4. Files and exports
-- **`.klm`** (JSON): cells, colours, visibility, 2D view, language and the user commands used.
+- **`.syn`** (JSON): cells, colours, visibility, 2D view, language and the user commands used.
 - **Export to Python**: a standalone script (only SymPy needed) that recomputes the notebook and
   prints every result. Text cells become comments.
 - **Export to LaTeX**: an `article` with text cells, inputs and results (`babel` French; Arabic uses
@@ -354,7 +354,7 @@ User commands are stored in `~/.kalam/user_commands.json` and also inside each `
 ## Web version: Windows, Linux, macOS, iOS, Android
 
 The same Python core runs in the browser with **Pyodide** (CPython compiled to WebAssembly).
-`kalam/web.py` is a JSON bridge over the engine; `web/app.html` replaces the Qt interface
+`symnote/web.py` is a JSON bridge over the engine; `web/app.html` replaces the Qt interface
 (notebook, palette, 2D canvas with touch/pinch, 3D via Plotly, formulas via MathJax).
 Functions are sent to the page as JavaScript expressions (`sympy.jscode`) so curves are sampled at full speed.
 
@@ -368,7 +368,7 @@ cd web/dist && python -m http.server           # try it: http://localhost:8000
   *Add to Home Screen*), Windows/Linux/macOS (Chrome or Edge → *Install SymNote*).
 - **App stores** (not done here): wrap `web/dist/` with Capacitor (`npx cap add android`, `npx cap add ios`);
   an iOS build needs a Mac with Xcode and an Apple developer account.
-- Notebooks are kept in the browser's storage; **Export** gives Python / LaTeX / tkz / .klm text to copy,
+- Notebooks are kept in the browser's storage; **Export** gives Python / LaTeX / tkz / .syn text to copy,
   or one `.zip` with all four.
 - Archives are shipped base64 in `.txt` files because claude.ai artifacts don't serve `.zip`.
 
@@ -400,11 +400,11 @@ Files: `src-tauri/tauri.conf.json` (window, CSP allowing WebAssembly, build hook
 
 ## 5. Code layout
 ```
-kalam/
+symnote/
   runtime.py    every built-in command, SymPy only (copied verbatim into Python exports)
   commands.py   registry: names fr/ar/en, categories, palette hints, user commands
   engine.py     parser/normalizer (aliases, unicode, implicit ×, equations), cells, evaluation
-  export.py     .klm, Python, LaTeX notebook, tkz figure
+  export.py     .syn, Python, LaTeX notebook, tkz figure
   i18n.py       interface strings
   ui/app.py         main window, toolbar, style
   ui/notebook.py    cells (render ↔ edit), sliders

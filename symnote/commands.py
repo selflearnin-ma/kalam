@@ -1,6 +1,6 @@
 """Command registry: command name -> function. Commands have one (English) name in every interface language;
 the French and Arabic names of earlier versions are kept only to update old notebooks when they are opened.
-User commands live in ~/.kalam/user_commands.json and must define `run(*args)`.
+User commands live in ~/.symnote/user_commands.json and must define `run(*args)`.
 """
 import json
 import os
@@ -8,7 +8,7 @@ import re
 
 from . import runtime
 
-USER_FILE = os.path.join(os.path.expanduser('~'), '.kalam', 'user_commands.json')
+USER_FILE = os.path.join(os.path.expanduser('~'), '.symnote', 'user_commands.json')
 
 CATEGORIES = ['calculus', 'arithmetic', 'sequences', 'sets', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'figures',
               'matrix']
@@ -169,7 +169,7 @@ class Registry:
                     try:
                         self.add_user(d)
                     except Exception as e:  # a broken user command must not stop the app
-                        print('Kalam: user command %s ignored: %s' % (d.get('name'), e))
+                        print('SymNote: user command %s ignored: %s' % (d.get('name'), e))
 
     def add_user(self, d):
         cat = d.get('category')       # groups of earlier versions: figures, or calculus

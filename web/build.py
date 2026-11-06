@@ -8,7 +8,7 @@ Pyodide, the SymPy/mpmath wheels and the JS libraries are downloaded once into w
 
 dist/app.html   page content for a claude.ai artifact (the platform adds <html><head>)
 dist/index.html the same page as a standalone, installable web app (any static host, offline after first visit)
-dist/py/        Pyodide, wheels and kalam-core.zip, fetched at runtime
+dist/py/        Pyodide, wheels and symnote-core.zip, fetched at runtime
 """
 import base64
 import json
@@ -33,7 +33,7 @@ VENDOR = {'mathjax': ('https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js
 CORE = ['__init__.py', 'runtime.py', 'commands.py', 'engine.py', 'export.py', 'i18n.py', 'web.py']
 PYODIDE = ['pyodide.js', 'pyodide.asm.js', 'pyodide.asm.wasm', 'pyodide-lock.json']
 # zips are shipped base64 in .txt files: claude.ai artifacts don't serve archives
-ARCHIVES = ['python_stdlib.zip', 'sympy-1.14.0-py3-none-any.whl', 'mpmath-1.3.0-py3-none-any.whl', 'kalam-core.zip']
+ARCHIVES = ['python_stdlib.zip', 'sympy-1.14.0-py3-none-any.whl', 'mpmath-1.3.0-py3-none-any.whl', 'symnote-core.zip']
 
 STANDALONE_HEAD = '''<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -47,7 +47,7 @@ STANDALONE_TAIL = '''
 </body></html>
 '''
 SW = '''// Offline cache: the app shell, Pyodide and the wheels (about 20 MB) are kept after the first visit.
-const C = 'kalam-v1';
+const C = 'symnote-v1';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(clients.claim()));
 self.addEventListener('fetch', e => {
@@ -93,13 +93,13 @@ def main(offline=False):
     pyodide_dir, wheels_dir = fetch_deps()
     shutil.rmtree(DIST, ignore_errors=True)
     os.makedirs(os.path.join(DIST, 'py'))
-    core = os.path.join(DIST, 'kalam-core.zip')
+    core = os.path.join(DIST, 'symnote-core.zip')
     with zipfile.ZipFile(core, 'w', zipfile.ZIP_DEFLATED) as z:
         for f in CORE:
-            z.write(os.path.join(ROOT, 'kalam', f), 'kalam/' + f)
+            z.write(os.path.join(ROOT, 'symnote', f), 'symnote/' + f)
     for f in PYODIDE:
         shutil.copy(os.path.join(pyodide_dir, f), os.path.join(DIST, 'py', f))
-    src = {'python_stdlib.zip': os.path.join(pyodide_dir, 'python_stdlib.zip'), 'kalam-core.zip': core}
+    src = {'python_stdlib.zip': os.path.join(pyodide_dir, 'python_stdlib.zip'), 'symnote-core.zip': core}
     for f in ARCHIVES:
         with open(src.get(f) or os.path.join(wheels_dir, f), 'rb') as a, open(os.path.join(DIST, 'py', f + '.txt'), 'wb') as b:
             b.write(base64.b64encode(a.read()))
@@ -109,7 +109,7 @@ def main(offline=False):
         shutil.copy(os.path.join(DEPS, 'computer-modern', 'fonts', f), os.path.join(DIST, 'fonts', f))
     page = open(os.path.join(WEB, 'app.html'), encoding='utf-8').read()
     for lang in ('fr', 'ar'):
-        with open(os.path.join(ROOT, 'examples', 'demo_%s.klm' % lang), encoding='utf-8') as f:
+        with open(os.path.join(ROOT, 'examples', 'demo_%s.syn' % lang), encoding='utf-8') as f:
             page = page.replace('__DEMO_%s__' % lang.upper(), json.dumps(json.load(f), ensure_ascii=False))
     assert '__DEMO_' not in page
     if offline:

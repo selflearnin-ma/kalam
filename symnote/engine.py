@@ -58,7 +58,7 @@ class DependencyError(Exception):
     """A move that would change which definition of a variable a line uses (args[0]: the variable)."""
 
 
-class KalamError(Exception):
+class SymNoteError(Exception):
     pass
 
 
@@ -74,7 +74,7 @@ def _tokens(text):
                 if t.type not in (tokenize.NEWLINE, tokenize.NL, tokenize.ENDMARKER,
                                   tokenize.INDENT, tokenize.DEDENT, tokenize.COMMENT)]
     except (tokenize.TokenError, IndentationError, SyntaxError) as e:
-        raise KalamError('syntax: %s' % e.args[0])
+        raise SymNoteError('syntax: %s' % e.args[0])
     root = _Group(None)
     stack = [root]
     pairs = {')': '(', ']': '[', '}': '{'}
@@ -86,12 +86,12 @@ def _tokens(text):
             stack.append(g)
         elif s in pairs and t.type == tokenize.OP:
             if len(stack) == 1 or stack[-1].opener != pairs[s]:
-                raise KalamError('syntax: unbalanced "%s"' % s)
+                raise SymNoteError('syntax: unbalanced "%s"' % s)
             stack.pop()
         else:
             stack[-1].items.append(t)
     if len(stack) != 1:
-        raise KalamError('syntax: missing ")"')
+        raise SymNoteError('syntax: missing ")"')
     return root.items
 
 
@@ -129,7 +129,7 @@ class Normalizer:
                 k = eqs[0]
                 out.append('Eq(%s, %s)' % (self._seq(a[:k]), self._seq(a[k + 1:])))
             elif eqs:
-                raise KalamError('syntax: several "=" in one expression')
+                raise SymNoteError('syntax: several "=" in one expression')
             else:
                 out.append(self._seq(a))
         if top and len(out) > 1:
@@ -209,7 +209,7 @@ class Normalizer:
                 parts.append('.')
                 prev_dot, prev = True, 'op'
             elif s == '=':
-                raise KalamError('syntax: unexpected "="')
+                raise SymNoteError('syntax: unexpected "="')
             else:
                 parts.append(' %s ' % s if s in ('<', '>', '<=', '>=', '==', '!=') else s)
                 prev = 'op'
@@ -314,10 +314,10 @@ class Session:
             src = self._held(src, loc, g)
             v = parse_expr(src, local_dict=loc, global_dict=g,
                            transformations=standard_transformations, evaluate=True)
-        except KalamError:
+        except SymNoteError:
             raise
         except SyntaxError as e:
-            raise KalamError('syntax: %s' % (e.msg or e))
+            raise SymNoteError('syntax: %s' % (e.msg or e))
         if isinstance(v, tuple) and len(v) in (2, 3) and all(isinstance(c, sp.Expr) for c in v):
             v = runtime.Point(*v)
         if isinstance(v, tuple):
@@ -337,7 +337,7 @@ class Session:
                 depth += {'(': 1, ')': -1}.get(src[j], 0)
                 j += 1
             if depth:
-                raise KalamError('syntax: missing ")"')
+                raise SymNoteError('syntax: missing ")"')
             inner = self._held(src[m.end():j - 1], loc, g)
             name = '_hold%d_%d' % (len(out), k)
             g2 = dict(g, Add=sp.Add, Mul=sp.Mul, Pow=sp.Pow)     # parse_expr(evaluate=False) writes these
@@ -402,7 +402,7 @@ class Session:
                 if isinstance(c.value, sp.Lambda) and code.isidentifier():
                     c.latex = function_latex(code, c.value)
         except Exception as e:  # any CAS failure is shown in the cell, never raised
-            c.error = str(e) if isinstance(e, KalamError) else '%s: %s' % (type(e).__name__, e)
+            c.error = str(e) if isinstance(e, SymNoteError) else '%s: %s' % (type(e).__name__, e)
             c.value = None
         self.env['_c%d' % n] = c.value
         if c.name and c.value is not None:
@@ -413,16 +413,16 @@ class Session:
         if not items:
             if c.name:                                 # G = Graphic() / Graphic3D(): empty until G.Draw(...)
                 return
-            raise KalamError('nothing to draw')
+            raise SymNoteError('nothing to draw')
         dims = [dimension(i) for i in items]
         bad = [i for i, d in zip(items, dims) if d is None]
         if bad:
-            raise KalamError('cannot be drawn: %s' % ', '.join(map(str, bad)))
+            raise SymNoteError('cannot be drawn: %s' % ', '.join(map(str, bad)))
         other = [i for i, d in zip(items, dims) if c.value.dim and d != c.value.dim]
         if other:
-            raise KalamError('a %dD graphic draws %dD objects: %s' % (c.value.dim, c.value.dim, ', '.join(map(str, other[:3]))))
+            raise SymNoteError('a %dD graphic draws %dD objects: %s' % (c.value.dim, c.value.dim, ', '.join(map(str, other[:3]))))
         if len(set(dims)) > 1:
-            raise KalamError('a figure is either 2D or 3D, not both')
+            raise SymNoteError('a figure is either 2D or 3D, not both')
         names = {id(v): k for k, v in self.env.items() if not k.startswith('_c')}
         c.labels = [names.get(id(i)) or names.get(id(getattr(i, 'source', None))) for i in items]   # Plot(f): labelled f
 
@@ -444,7 +444,7 @@ class Session:
             return
         name, params, rhs = m.group(1), m.group(2), m.group(4)
         if name in self.registry.aliases() or name in GLOBALS_BASE or name in _RENAME:
-            raise KalamError('"%s" is a reserved name' % name)
+            raise SymNoteError('"%s" is a reserved name' % name)
         c.name = name
         if params is not None:
             ps = [p.strip() for p in params.split(',') if p.strip()]
@@ -474,7 +474,7 @@ class Session:
         return c
 
     def load_cells(self, items):
-        """Cells from a .klm list. Old files: no `block` (one line per cell) and kind "text" cells,
+        """Cells from a .syn list. Old files: no `block` (one line per cell) and kind "text" cells,
         which become "..." lines of a single cell."""
         self.cells[:] = []
         self._snap = {}

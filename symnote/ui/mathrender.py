@@ -11,7 +11,7 @@ from matplotlib import mathtext, rcParams  # noqa: E402
 from matplotlib.font_manager import FontProperties  # noqa: E402
 
 rcParams['mathtext.fontset'] = 'cm'
-_DIR = tempfile.mkdtemp(prefix='kalam-math-')
+_DIR = tempfile.mkdtemp(prefix='symnote-math-')
 _cache = {}
 
 

@@ -1,4 +1,4 @@
-"""Kalam main window: palette + notebook on one side, 2D / 3D graphics on the other."""
+"""SymNote main window: palette + notebook on one side, 2D / 3D graphics on the other."""
 import os
 import sys
 
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QMainWindow
 
 from ..commands import Registry
 from ..engine import Session
-from ..export import figure_tkz, load_klm, save_klm, to_latex, to_python
+from ..export import figure_tkz, load_syn, save_syn, to_latex, to_python
 from ..i18n import LANGS, tr
 from .canvas2d import Canvas2D
 from .cmdeditor import CommandsEditor
@@ -48,7 +48,7 @@ QSlider::handle:horizontal { background: #4c6ef5; width: 14px; margin: -6px 0; b
 class MainWindow(QMainWindow):
     def __init__(self, path=None):
         super().__init__()
-        self.settings = QSettings('Kalam', 'Kalam')
+        self.settings = QSettings('SymNote', 'SymNote')
         self.lang = self.settings.value('lang', 'fr')
         self.path, self.modified = None, False
         self.session = Session(Registry())
@@ -137,7 +137,7 @@ class MainWindow(QMainWindow):
     def update_title(self):
         name = os.path.basename(self.path) if self.path else 'sans titre' if self.lang == 'fr' else \
             'بدون عنوان' if self.lang == 'ar' else 'untitled'
-        self.setWindowTitle('Kalam — %s%s' % (name, ' •' if self.modified else ''))
+        self.setWindowTitle('SymNote — %s%s' % (name, ' •' if self.modified else ''))
 
     # ------------------------------------------------------------ updates
     def redraw(self):
@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
     def ask_save(self):
         if not self.modified:
             return True
-        r = QMessageBox.question(self, 'Kalam', tr('unsaved', self.lang),
+        r = QMessageBox.question(self, 'SymNote', tr('unsaved', self.lang),
                                  QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
         if r == QMessageBox.Save:
             return self.save()
@@ -183,11 +183,11 @@ class MainWindow(QMainWindow):
         if not path:
             if not self.ask_save():
                 return
-            path, _ = QFileDialog.getOpenFileName(self, tr('open', self.lang), '', 'Kalam (*.klm)')
+            path, _ = QFileDialog.getOpenFileName(self, tr('open', self.lang), '', 'SymNote (*.syn)')
         if not path:
             return
         try:
-            session, view, _ = load_klm(path, self.session.registry)
+            session, view, _ = load_syn(path, self.session.registry)
         except Exception as e:
             return QMessageBox.warning(self, tr('error', self.lang), str(e))
         self.path, self.modified = path, False
@@ -198,20 +198,20 @@ class MainWindow(QMainWindow):
     def save(self, as_=False):
         path = self.path
         if as_ or not path:
-            path, _ = QFileDialog.getSaveFileName(self, tr('save_as', self.lang), 'notebook.klm', 'Kalam (*.klm)')
+            path, _ = QFileDialog.getSaveFileName(self, tr('save_as', self.lang), 'notebook.syn', 'SymNote (*.syn)')
             if not path:
                 return False
-            if not path.endswith('.klm'):
-                path += '.klm'
-        save_klm(self.session, path, self.canvas.view(), self.lang)
+            if not path.endswith('.syn'):
+                path += '.syn'
+        save_syn(self.session, path, self.canvas.view(), self.lang)
         self.path, self.modified = path, False
         self.update_title()
         self.statusBar().showMessage(tr('saved', self.lang) % path, 4000)
         return True
 
     def _export(self, text, filt, default):
-        base = os.path.splitext(self.path)[0] if self.path else 'kalam'
-        path, _ = QFileDialog.getSaveFileName(self, 'Kalam', base + default, filt)
+        base = os.path.splitext(self.path)[0] if self.path else 'symnote'
+        path, _ = QFileDialog.getSaveFileName(self, 'SymNote', base + default, filt)
         if path:
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(text)
@@ -244,7 +244,7 @@ class MainWindow(QMainWindow):
 def main(argv=None):
     argv = argv if argv is not None else sys.argv
     app = QApplication(argv)
-    app.setApplicationName('Kalam')
+    app.setApplicationName('SymNote')
     app.setStyle('Fusion')
     app.setStyleSheet(STYLE)
     w = MainWindow(argv[1] if len(argv) > 1 else None)

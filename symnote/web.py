@@ -230,16 +230,16 @@ def new():
 
 
 # ---------------------------------------------------------------- files
-def klm_text(lang='fr'):
-    data = {'format': 'kalam', 'version': 2, 'lang': lang,
+def syn_text(lang='fr'):
+    data = {'format': 'symnote', 'version': 2, 'lang': lang,
             'cells': session.cells_json(),
             'commands': [c.to_json() for c in session.registry.user_commands()]}
     return json.dumps(data, ensure_ascii=False, indent=1)
 
 
-def load_klm_text(text):
+def load_syn_text(text):
     data = json.loads(text)
-    if data.get('format') != 'kalam':
+    if data.get('format') not in ('symnote', 'kal' + 'am'):    # files saved before the rename open too
         raise ValueError('not a SymNote file')
     for d in data.get('commands', []):
         if d['name'] not in session.registry.commands or session.registry.commands[d['name']].code is not None:
@@ -248,11 +248,11 @@ def load_klm_text(text):
     return json.dumps(dict(lang=data.get('lang')))
 
 
-def export_zip(name='kalam', lang='fr'):
-    """One zip with the notebook (.klm), Python, LaTeX notebook and tkz figures."""
+def export_zip(name='symnote', lang='fr'):
+    """One zip with the notebook (.syn), Python, LaTeX notebook and tkz figures."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
-        z.writestr(name + '.klm', klm_text(lang))
+        z.writestr(name + '.syn', syn_text(lang))
         z.writestr(name + '.py', to_python(session))
         z.writestr(name + '.tex', to_latex(session, lang))
         z.writestr(name + '_figures.tex', figure_tkz(session))
@@ -261,7 +261,7 @@ def export_zip(name='kalam', lang='fr'):
 
 def export_text(kind, lang='fr'):
     return {'py': lambda: to_python(session), 'tex': lambda: to_latex(session, lang),
-            'fig': lambda: figure_tkz(session), 'klm': lambda: klm_text(lang)}[kind]()
+            'fig': lambda: figure_tkz(session), 'syn': lambda: syn_text(lang)}[kind]()
 
 
 # ---------------------------------------------------------------- commands
