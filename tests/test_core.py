@@ -316,9 +316,13 @@ def test_sequences():
     assert ev('SeqLimit((2*n + 1)/(n + 3))') == 2
     assert ev('RecLimit(sqrt(u + 2), 0)') == 2
     assert ev('SeriesLimit(1/k^2, k, 1)') == sp.pi**2 / 6
+    assert ev('SeqLimit(Sequence((2*n + 1)/(n + 3), n, 0, 5))') == 2
+    assert ev('RecLimit(RecSequence(sqrt(u + 2), 0, 5))') == ev('SeqLimit(RecSequence(sqrt(u + 2), 0, 5))') == 2
+    assert ev('SeriesLimit(Sequence(1/k^2, k, 1, 5))') == sp.pi**2 / 6
+    assert ev('Sequence(k^2, k, 1, 3)') == [1, 4, 9]
     import json
     web.new()
-    web.set_cell(0, 'PlotSeq(u/2 + 1, 0, 4)\nPlotSeq(1/n, 1, 5)\nG = Graphic()\nG.PlotSeq(n^2, 0, 3)\nG')
+    web.set_cell(0, 'g(x) = x/2 + 1\nv = RecSequence(g(u), 4, 5)\nPlotSeq(v)\nPlotSeq(Sequence(1/n, n, 1, 5))\nG = Graphic()\nG.PlotSeq(Sequence(n^2, n, 0, 3))\nG')
     lines = json.loads(web.state())['lines']
     kinds = [{p['k'] for it in ln['figure']['items'] for p in it['scene']} for ln in lines if 'figure' in ln]
     assert kinds == [{'fx', 'seg', 'pt'}, {'pt'}, {'pt'}], kinds

@@ -36,10 +36,10 @@ BUILTINS = [
     ('Remainder', None, None, 'arithmetic', '17, 5'),
     # sequences
     ('RecSequence', None, None, 'sequences', 'u/2 + 1, 0, 5'),
-    ('SeqLimit', None, None, 'sequences', '(2*n + 1)/(n + 3)'),
-    ('RecLimit', None, None, 'sequences', 'u/2 + 1, 0'),
-    ('SeriesLimit', None, None, 'sequences', '1/2^k, k, 0'),
-    ('PlotSeq', None, None, 'sequences', 'u/2 + 1, 0, 6'),
+    ('SeqLimit', None, None, 'sequences', 'Sequence((2*n + 1)/(n + 3), n, 0, 5)'),
+    ('RecLimit', None, None, 'sequences', 'RecSequence(u/2 + 1, 0, 5)'),
+    ('SeriesLimit', None, None, 'sequences', 'Sequence(1/2^k, k, 0, 5)'),
+    ('PlotSeq', None, None, 'sequences', 'RecSequence(u/2 + 1, 0, 6)'),
     # sets
     ('Interval', None, None, 'sets', '-1, 3'),
     ('IntervalOpen', None, None, 'sets', '0, oo'),

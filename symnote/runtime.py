@@ -691,8 +691,17 @@ def Sum(e, k, a, b):
     return sp.summation(e, (k, a, b))
 
 
+class Terms(list):
+    """Terms of a sequence: a plain list that remembers its first index n0, its definition
+    (e, k) or, for a recursive one, (f, u): PlotSeq, SeqLimit, RecLimit, SeriesLimit use it."""
+    def __init__(self, items, n0=0, f=None, u=None, e=None, k=None):
+        super().__init__(items)
+        self.n0, self.f, self.u, self.e, self.k = n0, f, u, e, k
+
+
 def Sequence(e, k, a, b):
-    return [sp.sympify(e).subs(k, i) for i in range(int(a), int(b) + 1)]
+    e = sp.sympify(e)
+    return Terms([e.subs(k, i) for i in range(int(a), int(b) + 1)], int(a), e=e, k=k)
 
 
 def _sym(e, name):
@@ -718,19 +727,26 @@ def RecSequence(f, u0, N):
     out = [sp.sympify(u0)]
     for i in range(int(N)):
         out.append(sp.simplify(e.subs({u: out[-1], **({n: i} if n else {})})))
-    return out
+    return Terms(out, 0, e, u)
 
 
 def SeqLimit(e, n=None):
-    """SeqLimit(u_n) | SeqLimit(e, n): limit as n -> +oo."""
+    """SeqLimit(Sequence(...)) | SeqLimit(RecSequence(...)) | SeqLimit(u_n) | SeqLimit(e, n): limit as n -> +oo."""
+    if isinstance(e, Terms):
+        return RecLimit(e) if e.f is not None else sp.limit(e.e, e.k, sp.oo)
     e = sp.sympify(e)
     n = n or _sym(e, 'n') or _var(e)
     return sp.limit(e, n, sp.oo)
 
 
-def RecLimit(f, u0):
-    """RecLimit(f, u0): limit of u_{n+1} = f(u_n), u_0 = u0 (a solution of l = f(l))."""
-    e, u = _rec(f)
+def RecLimit(f, u0=None):
+    """RecLimit(RecSequence(...)) | RecLimit(f, u0): limit of u_{n+1} = f(u_n) (a solution of l = f(l))."""
+    if isinstance(f, Terms):
+        if f.f is None:
+            raise ValueError('RecLimit needs a RecSequence(...): use SeqLimit for Sequence(...)')
+        e, u, u0 = f.f, f.u, f[0]
+    else:
+        e, u = _rec(f)
     g = sp.lambdify(u, e, 'math')
     v = float(sp.N(u0))
     try:
@@ -749,36 +765,34 @@ def RecLimit(f, u0):
 
 
 def SeriesLimit(e, k=None, k0=0):
-    """SeriesLimit(u_k, k, k0): sum of the series u_k0 + u_(k0+1) + ..."""
+    """SeriesLimit(Sequence(u_k, k, k0, ...)) | SeriesLimit(u_k, k, k0): sum of the series u_k0 + u_(k0+1) + ..."""
+    if isinstance(e, Terms):
+        if e.e is None:
+            raise ValueError('SeriesLimit needs an explicit Sequence(u_k, k, k0, N)')
+        return sp.summation(e.e, (e.k, e.n0, sp.oo))
     e = sp.sympify(e)
     k = k or _sym(e, 'k') or _sym(e, 'n') or _var(e)
     return sp.summation(e, (k, k0, sp.oo))
 
 
-def PlotSeq(e, *a):
-    """PlotSeq(terms) | PlotSeq(u_n, n0, N) | PlotSeq(f, u0, N): points (n, u_n);
-    for a recursive sequence (f written with u), the staircase/cobweb on y = f(x) and y = x."""
-    if isinstance(e, (list, tuple)):
-        n0 = int(a[0]) if a else 0
-        return _seq_fig([], [sp.Point(n0 + i, t) for i, t in enumerate(e)])
-    ex = sp.sympify(e.expr if isinstance(e, sp.Lambda) else e)
-    if isinstance(e, sp.Lambda) or _sym(ex, 'u') is not None:
-        if not a:
-            raise ValueError('PlotSeq(f, u0, N)')
-        f, u = _rec(e)
-        terms = RecSequence(e, a[0], a[1] if len(a) > 1 else 10)
-        vals = [float(t) for t in terms]
-        lo, hi = min(vals + [0]), max(vals)
-        m = max(1, (hi - lo) / 4)
-        lo, hi = sp.nsimplify(round(lo - m, 2)), sp.nsimplify(round(hi + m, 2))
-        stairs = []          # one object (one colour): u_n -> f(u_n) -> back to y = x
-        for p, q in zip(terms, terms[1:]):
-            if p != q:
-                stairs += [sp.Segment(sp.Point(p, p), sp.Point(p, q)), sp.Segment(sp.Point(p, q), sp.Point(q, q))]
-        return _seq_fig([Graph(f.subs(u, x), x, lo, hi), Graph(x, x, lo, hi)], stairs, [sp.Point(t, 0) for t in terms])
-    n = _sym(ex, 'n') or _var(ex)
-    n0, N = (int(a[0]), int(a[1])) if len(a) > 1 else (0, int(a[0]) if a else 10)
-    return _seq_fig([], [sp.Point(i, ex.subs(n, i)) for i in range(n0, N + 1)])
+def PlotSeq(terms):
+    """PlotSeq(Sequence(...)) : points (n, u_n);
+    PlotSeq(RecSequence(f, u0, N)) : staircase / cobweb on y = f(x) and y = x."""
+    if not isinstance(terms, (list, tuple)):
+        raise ValueError('PlotSeq(Sequence(...)) or PlotSeq(RecSequence(...))')
+    f, u = getattr(terms, 'f', None), getattr(terms, 'u', None)
+    if f is None:
+        n0 = getattr(terms, 'n0', 0)
+        return _seq_fig([], [sp.Point(n0 + i, t) for i, t in enumerate(terms)])
+    vals = [float(t) for t in terms]
+    lo, hi = min(vals + [0]), max(vals)
+    m = max(1, (hi - lo) / 4)
+    lo, hi = sp.nsimplify(round(lo - m, 2)), sp.nsimplify(round(hi + m, 2))
+    stairs = []          # one object (one colour): u_n -> f(u_n) -> back to y = x
+    for p, q in zip(terms, terms[1:]):
+        if p != q:
+            stairs += [sp.Segment(sp.Point(p, p), sp.Point(p, q)), sp.Segment(sp.Point(p, q), sp.Point(q, q))]
+    return _seq_fig([Graph(f.subs(u, x), x, lo, hi), Graph(x, x, lo, hi)], stairs, [sp.Point(t, 0) for t in terms])
 
 
 def _seq_fig(items, *groups):
