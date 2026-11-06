@@ -10,7 +10,7 @@ from . import runtime
 
 USER_FILE = os.path.join(os.path.expanduser('~'), '.kalam', 'user_commands.json')
 
-CATEGORIES = ['calculus', 'arithmetic', 'sets', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'figures',
+CATEGORIES = ['calculus', 'arithmetic', 'sequences', 'sets', 'functions', 'polynomials', 'trigonometry', 'transform', 'geometry', 'figures',
               'matrix']
 
 # name, former French and Arabic names (old files only), category, argument hint
@@ -23,9 +23,9 @@ BUILTINS = [
     ('NSolve', 'RésoudreN', 'حل_عددي', 'calculus', 'e, x'),
     ('Substitute', 'Substituer', 'تعويض', 'calculus', 'e, x, 2'),
     ('Numeric', 'Valeur', 'قيمة_مقربة', 'calculus', 'e, 5'),
-    ('Sum', 'Somme', 'مجموع', 'calculus', 'k^2, k, 1, n'),
-    ('Sequence', 'Suite', 'متتالية', 'calculus', 'k^2, k, 1, 5'),
-    ('Series', 'DL', 'نشر_محدود', 'calculus', 'f, 0, 4'),
+    ('Sum', 'Somme', 'مجموع', 'sequences', 'k^2, k, 1, n'),
+    ('Sequence', 'Suite', 'متتالية', 'sequences', 'k^2, k, 1, 5'),
+    ('Series', 'DL', 'نشر_محدود', 'sequences', 'f, 0, 4'),
     # arithmetic
     ('GCD', 'PGCD', 'قاسم_مشترك', 'arithmetic', 'a, b'),
     ('LCM', 'PPCM', 'مضاعف_مشترك', 'arithmetic', 'a, b'),
@@ -34,6 +34,12 @@ BUILTINS = [
     ('PrimeFactors', None, None, 'arithmetic', '360'),
     ('Quotient', None, None, 'arithmetic', '17, 5'),
     ('Remainder', None, None, 'arithmetic', '17, 5'),
+    # sequences
+    ('RecSequence', None, None, 'sequences', 'u/2 + 1, 0, 5'),
+    ('SeqLimit', None, None, 'sequences', '(2*n + 1)/(n + 3)'),
+    ('RecLimit', None, None, 'sequences', 'u/2 + 1, 0'),
+    ('SeriesLimit', None, None, 'sequences', '1/2^k, k, 0'),
+    ('PlotSeq', None, None, 'sequences', 'u/2 + 1, 0, 6'),
     # sets
     ('Interval', None, None, 'sets', '-1, 3'),
     ('IntervalOpen', None, None, 'sets', '0, oo'),

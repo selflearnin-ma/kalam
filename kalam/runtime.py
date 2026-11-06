@@ -695,6 +695,99 @@ def Sequence(e, k, a, b):
     return [sp.sympify(e).subs(k, i) for i in range(int(a), int(b) + 1)]
 
 
+def _sym(e, name):
+    """The free symbol of e called name (u, n, ...), or None."""
+    return next((s for s in getattr(e, 'free_symbols', ()) if s.name == name), None)
+
+
+def _rec(f):
+    """(expression, symbol) of u_{n+1} = f(u_n): f written with u (or a one-variable Lambda)."""
+    if isinstance(f, sp.Lambda):
+        return f.expr, f.variables[0]
+    f = sp.sympify(f)
+    u = _sym(f, 'u')
+    if u is None:
+        raise ValueError('write the recurrence with u, e.g. RecSequence(u/2 + 1, 0, 5)')
+    return f, u
+
+
+def RecSequence(f, u0, N):
+    """RecSequence(f, u0, N): terms u_0..u_N of u_{n+1} = f(u_n) (f may also use n)."""
+    e, u = _rec(f)
+    n = _sym(e, 'n')
+    out = [sp.sympify(u0)]
+    for i in range(int(N)):
+        out.append(sp.simplify(e.subs({u: out[-1], **({n: i} if n else {})})))
+    return out
+
+
+def SeqLimit(e, n=None):
+    """SeqLimit(u_n) | SeqLimit(e, n): limit as n -> +oo."""
+    e = sp.sympify(e)
+    n = n or _sym(e, 'n') or _var(e)
+    return sp.limit(e, n, sp.oo)
+
+
+def RecLimit(f, u0):
+    """RecLimit(f, u0): limit of u_{n+1} = f(u_n), u_0 = u0 (a solution of l = f(l))."""
+    e, u = _rec(f)
+    g = sp.lambdify(u, e, 'math')
+    v = float(sp.N(u0))
+    try:
+        for _ in range(2000):
+            v = g(v)
+            if abs(v) > 1e12:
+                return sp.oo if v > 0 else -sp.oo
+    except (OverflowError, ValueError, ZeroDivisionError):
+        raise ValueError('the sequence is not defined for every n')
+    w = g(v)
+    if abs(w - v) > 1e-6 * max(1, abs(v)):
+        raise ValueError('the sequence does not converge')
+    fixed = [r for r in sp.solve(sp.Eq(u, e), u) if r.is_real]
+    return min(fixed, key=lambda r: abs(float(r) - v), default=sp.nsimplify(v)) if fixed and \
+        min(abs(float(r) - v) for r in fixed) < 1e-4 else sp.Float(v, 10)
+
+
+def SeriesLimit(e, k=None, k0=0):
+    """SeriesLimit(u_k, k, k0): sum of the series u_k0 + u_(k0+1) + ..."""
+    e = sp.sympify(e)
+    k = k or _sym(e, 'k') or _sym(e, 'n') or _var(e)
+    return sp.summation(e, (k, k0, sp.oo))
+
+
+def PlotSeq(e, *a):
+    """PlotSeq(terms) | PlotSeq(u_n, n0, N) | PlotSeq(f, u0, N): points (n, u_n);
+    for a recursive sequence (f written with u), the staircase/cobweb on y = f(x) and y = x."""
+    if isinstance(e, (list, tuple)):
+        n0 = int(a[0]) if a else 0
+        return _seq_fig([], [sp.Point(n0 + i, t) for i, t in enumerate(e)])
+    ex = sp.sympify(e.expr if isinstance(e, sp.Lambda) else e)
+    if isinstance(e, sp.Lambda) or _sym(ex, 'u') is not None:
+        if not a:
+            raise ValueError('PlotSeq(f, u0, N)')
+        f, u = _rec(e)
+        terms = RecSequence(e, a[0], a[1] if len(a) > 1 else 10)
+        vals = [float(t) for t in terms]
+        lo, hi = min(vals + [0]), max(vals)
+        m = max(1, (hi - lo) / 4)
+        lo, hi = sp.nsimplify(round(lo - m, 2)), sp.nsimplify(round(hi + m, 2))
+        stairs = []          # one object (one colour): u_n -> f(u_n) -> back to y = x
+        for p, q in zip(terms, terms[1:]):
+            if p != q:
+                stairs += [sp.Segment(sp.Point(p, p), sp.Point(p, q)), sp.Segment(sp.Point(p, q), sp.Point(q, q))]
+        return _seq_fig([Graph(f.subs(u, x), x, lo, hi), Graph(x, x, lo, hi)], stairs, [sp.Point(t, 0) for t in terms])
+    n = _sym(ex, 'n') or _var(ex)
+    n0, N = (int(a[0]), int(a[1])) if len(a) > 1 else (0, int(a[0]) if a else 10)
+    return _seq_fig([], [sp.Point(i, ex.subs(n, i)) for i in range(n0, N + 1)])
+
+
+def _seq_fig(items, *groups):
+    """Figure whose lists stay one object each (one colour), as Figure() would split them."""
+    F = Figure(items, 2)
+    F.items += [g for g in groups if g]
+    return F
+
+
 # ---------------------------------------------------------------- matrices
 def Matrix(*rows):
     if len(rows) == 1:

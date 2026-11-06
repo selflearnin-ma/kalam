@@ -207,6 +207,7 @@ def _gp(expr, var):
 def figure_window(items):
     """[xmin, xmax, ymin, ymax] showing the figure's points, circles... and the functions over that range."""
     xs, ys = [], []
+    items = [w for v in items for w in (v if isinstance(v, (list, tuple)) else [v])]
     for v in items:
         if isinstance(v, sp.Point2D):
             pts = [v]
@@ -231,7 +232,7 @@ def figure_window(items):
     if x1 - x0 < 4:
         x0, x1 = (x0 + x1) / 2 - 2, (x0 + x1) / 2 + 2
     functions = [v for v in items if isinstance(v, (sp.Lambda, runtime.Graph, sp.Equality))]
-    if functions:                         # a graph needs room: at least [-6, 6]
+    if any(getattr(v, 'a', None) is None for v in functions):    # a graph on all of R needs room: at least [-6, 6]
         x0, x1 = min(x0, -6), max(x1, 6)
     for v in functions:                   # their values over [x0, x1], |y| <= 10 so steep curves don't flatten the view
         if isinstance(v, sp.Lambda) and len(v.variables) == 1:

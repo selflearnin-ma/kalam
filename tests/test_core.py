@@ -308,6 +308,22 @@ def test_move_keeps_values():
     assert all(c.error is None for c in s.cells)
 
 
+def test_sequences():
+    from kalam import web
+    s = Session()
+    ev = s.evaluate_expression
+    assert ev('RecSequence(u/2 + 1, 0, 3)') == [0, 1, sp.Rational(3, 2), sp.Rational(7, 4)]
+    assert ev('SeqLimit((2*n + 1)/(n + 3))') == 2
+    assert ev('RecLimit(sqrt(u + 2), 0)') == 2
+    assert ev('SeriesLimit(1/k^2, k, 1)') == sp.pi**2 / 6
+    import json
+    web.new()
+    web.set_cell(0, 'PlotSeq(u/2 + 1, 0, 4)\nPlotSeq(1/n, 1, 5)\nG = Graphic()\nG.PlotSeq(n^2, 0, 3)\nG')
+    lines = json.loads(web.state())['lines']
+    kinds = [{p['k'] for it in ln['figure']['items'] for p in it['scene']} for ln in lines if 'figure' in ln]
+    assert kinds == [{'fx', 'seg', 'pt'}, {'pt'}, {'pt'}], kinds
+
+
 def test_web_bridge():
     import json
     import zipfile

@@ -158,6 +158,8 @@ The palette shows them in this order: Keyboard, then the groups below. Geometry 
 plane and in space (in space Reflect also takes a plane, and Rotate turns around an axis: `Rotate(A, pi/2, Line(O, B))`).
 Sets can also be written with symbols: `A ∪ B`, `A ∩ B`, `A ∖ B`, `ℕ ℤ ℚ ℝ ∅` (keys on the Keyboard tab);
 intervals are shown as [a ; b], ]a ; b[.
+A recursive sequence u_{n+1} = f(u_n) is written with u: `RecSequence(u/2 + 1, 0, 5)`, `RecLimit(u/2 + 1, 0)`;
+`PlotSeq(u/2 + 1, 0, 6)` draws its staircase / cobweb diagram, `PlotSeq(1/n, 1, 10)` the points (n, u_n).
 `Represent(...)` draws a set of the plane given by equations or inequalities (several: their system),
 `Represent3D(...)` the surfaces of space (planes, spheres, cylinders, z = f(x, y), ...).
 
@@ -172,9 +174,6 @@ intervals are shown as [a ; b], ]a ; b[.
 | NSolve | `NSolve(e, x)` |
 | Substitute | `Substitute(e, x, 2)` |
 | Numeric | `Numeric(e, 5)` |
-| Sum | `Sum(k^2, k, 1, n)` |
-| Sequence | `Sequence(k^2, k, 1, 5)` |
-| Series | `Series(f, 0, 4)` |
 
 **Arithmetic**
 
@@ -187,6 +186,19 @@ intervals are shown as [a ; b], ]a ; b[.
 | PrimeFactors | `PrimeFactors(360)` |
 | Quotient | `Quotient(17, 5)` |
 | Remainder | `Remainder(17, 5)` |
+
+**Sequences**
+
+| Command | Example |
+|---|---|
+| Sum | `Sum(k^2, k, 1, n)` |
+| Sequence | `Sequence(k^2, k, 1, 5)` |
+| Series | `Series(f, 0, 4)` |
+| RecSequence | `RecSequence(u/2 + 1, 0, 5)` |
+| SeqLimit | `SeqLimit((2*n + 1)/(n + 3))` |
+| RecLimit | `RecLimit(u/2 + 1, 0)` |
+| SeriesLimit | `SeriesLimit(1/2^k, k, 0)` |
+| PlotSeq | `PlotSeq(u/2 + 1, 0, 6)` |
 
 **Sets**
 
